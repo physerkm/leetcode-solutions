@@ -6,6 +6,7 @@ LeetCode'da çözdüğüm soruların C# çözümleri.
 
 | # | Soru | Zorluk | Çözüm |
 |---|------|--------|-------|
+| 20 | [Valid Parentheses](https://leetcode.com/problems/valid-parentheses/) | Easy | [C#](src/LeetCode/Problems/P0020_ValidParentheses/Solution.cs) |
 | 74 | [Search a 2D Matrix](https://leetcode.com/problems/search-a-2d-matrix/) | Medium | [C#](src/LeetCode/Problems/P0074_SearchA2DMatrix/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0074_SearchA2DMatrix/) |
 
 ## Nasıl çalıştırılır
