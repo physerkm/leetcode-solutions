@@ -6,7 +6,7 @@ LeetCode'da çözdüğüm soruların C# çözümleri.
 
 | # | Soru | Zorluk | Çözüm |
 |---|------|--------|-------|
-| 74 | [Search a 2D Matrix](https://leetcode.com/problems/search-a-2d-matrix/) | Medium | [C#](src/LeetCode/Problems/P0074_SearchA2DMatrix/Solution.cs) |
+| 74 | [Search a 2D Matrix](https://leetcode.com/problems/search-a-2d-matrix/) | Medium | [C#](src/LeetCode/Problems/P0074_SearchA2DMatrix/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0074_SearchA2DMatrix/) |
 
 ## Nasıl çalıştırılır
 
@@ -42,6 +42,9 @@ tests/LeetCode.Tests/
 └── Problems/
     └── P0074_SearchA2DMatrix/
         └── SolutionTests.cs  # çözümün testleri
+docs/
+└── P0074_SearchA2DMatrix/
+    └── index.html          # adım adım anlatım (GitHub Pages'te yayınlanır)
 ```
 
 Her soru kendi namespace'inde (`LeetCode.Problems.P0074_SearchA2DMatrix`) durduğu için tüm sınıflar, LeetCode'daki gibi `Solution` adını kullanabilir.

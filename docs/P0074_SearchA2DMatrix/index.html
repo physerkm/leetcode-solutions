@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matriste Binary Search</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: one reading column; the stepper is a single tool panel (controls, step card, matrix | code) that stacks on phones. */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --ink: #141b26;
+  --muted: #5a6779;
+  --line: #d6dce6;
+  --accent: #3346c8;
+  --accent-ink: #ffffff;
+  --range: #e3e9fb;
+  --range-ink: #1d2a6b;
+  --gone: #eef1f5;
+  --gone-ink: #a3adbb;
+  --good: #17824a;
+  --good-ink: #ffffff;
+  --bad: #b8402a;
+  --bad-ink: #ffffff;
+  --code-bg: #f7f8fb;
+  --code-hl: #dfe5fb;
+  --kw: #7a3aa8;
+  --num: #a35a00;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+    --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+    --gone: #11171f; --gone-ink: #4f5a6b; --good: #3fbf7a; --good-ink: #06150d;
+    --bad: #ff7d66; --bad-ink: #1a0905; --code-bg: #111821; --code-hl: #22305a;
+    --kw: #c79bf0; --num: #f0b45c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+  --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+  --gone: #11171f; --gone-ink: #4f5a6b; --good: #3fbf7a; --good-ink: #06150d;
+  --bad: #ff7d66; --bad-ink: #1a0905; --code-bg: #111821; --code-hl: #22305a;
+  --kw: #c79bf0; --num: #f0b45c;
+  color-scheme: dark;
+}
+
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
+.wrap {
+  max-width: 1040px; margin: 0 auto;
+  padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px;
+}
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--muted); margin: 0; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 6vw, 54px); line-height: 1.05; letter-spacing: -.02em; margin: 8px 0 14px; text-wrap: balance; }
+.lead { max-width: 62ch; color: var(--muted); margin: 0; font-size: 17px; }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -.01em; margin: 0 0 18px; text-wrap: balance; }
+code { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+
+/* Idea */
+.idea { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; list-style: none; padding: 0; margin: 0; }
+.idea li { border-top: 2px solid var(--ink); padding-top: 12px; min-width: 0; }
+.idea .n { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.idea h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 2px 0 6px; text-wrap: balance; }
+.idea p { margin: 0; color: var(--muted); font-size: 15px; }
+@media (max-width: 760px) { .idea { grid-template-columns: 1fr; gap: 20px; } }
+
+/* Stepper panel */
+.stepper { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+@media (max-width: 560px) { .stepper { padding: 16px; } }
+.stepper h2 { margin: 0; }
+.controls { display: flex; flex-wrap: wrap; gap: 16px 24px; align-items: flex-end; justify-content: space-between; }
+.target { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 12px; }
+.field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+input[type="number"] { width: 7.5em; font: 600 18px var(--font-mono); padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.err { margin: 0; flex-basis: 100%; font-size: 13px; color: var(--bad); }
+button { font: 500 14px var(--font-body); padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .4; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.presets button { font-family: var(--font-mono); font-size: 13px; padding: 8px 10px; }
+.presets button[aria-pressed="true"] { border-color: var(--accent); background: var(--range); color: var(--range-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav { display: flex; gap: 8px; }
+
+.step { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+.step-meta { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag { font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--range); color: var(--range-ink); }
+.tag[data-kind="found"] { background: var(--good); color: var(--good-ink); }
+.tag[data-kind="end"] { background: var(--bad); color: var(--bad-ink); }
+#step-text { margin: 8px 0 0; font-size: 16.5px; max-width: 78ch; min-height: 3.2em; }
+
+.board { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 28px; }
+@media (max-width: 880px) { .board { grid-template-columns: 1fr; } }
+.col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.panel-label { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0; }
+.panel-label + .panel-label, .spaced { margin-top: 12px; }
+
+/* Matrix */
+.matrix { display: grid; grid-template-columns: auto repeat(4, minmax(0, 66px)); gap: 6px; align-items: center; }
+.mh, .mr { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+.mh { text-align: center; }
+.mr { padding-right: 6px; white-space: nowrap; }
+.cell { position: relative; aspect-ratio: 1; max-width: 100%; border-radius: 8px; display: grid; place-items: center; font: 600 18px var(--font-mono); border: 1px solid transparent; cursor: pointer; }
+.cell .k { position: absolute; top: 3px; left: 6px; font-size: 10px; font-weight: 400; opacity: .75; }
+
+/* Strip */
+.strip-scroll { overflow-x: auto; padding: 2px 2px 4px; }
+.strip { display: flex; gap: 14px; width: max-content; }
+.grp { display: flex; flex-direction: column; gap: 5px; }
+.grp-label { font-size: 11px; color: var(--muted); font-family: var(--font-mono); border-bottom: 1px solid var(--line); padding-bottom: 2px; }
+.grp-cells { display: flex; gap: 4px; }
+.slot { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 36px; }
+.scell { width: 36px; height: 46px; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; font: 600 14px var(--font-mono); border: 1px solid transparent; cursor: pointer; }
+.scell .k { font-size: 10px; font-weight: 400; opacity: .75; }
+.marks { display: flex; flex-direction: column; align-items: center; min-height: 46px; font: 600 10px/1.25 var(--font-mono); color: var(--muted); }
+.marks .arrow { font-size: 8px; line-height: 1; margin-bottom: 1px; }
+.marks .mark-mid { color: var(--accent); }
+
+/* Cell states, shared by matrix and strip */
+[data-state="in"] { background: var(--range); color: var(--range-ink); }
+[data-state="gone"] { background: var(--gone); color: var(--gone-ink); border-color: var(--line); border-style: dashed; }
+[data-state="mid"] { background: var(--accent); color: var(--accent-ink); }
+[data-state="found"] { background: var(--good); color: var(--good-ink); }
+.cell[data-was-mid="1"], .scell[data-was-mid="1"] { border: 2px dashed var(--accent); }
+.probe { box-shadow: 0 0 0 2px var(--ink); }
+.cell, .scell { transition: background-color .2s, color .2s, border-color .2s; }
+@media (prefers-reduced-motion: reduce) { .cell, .scell { transition: none; } }
+
+.probe-text { margin: 0; font-size: 14px; color: var(--muted); min-height: 2.6em; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; border: 1px solid var(--line); }
+
+/* Variables + code */
+.vars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.var { border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; background: var(--bg); }
+.var dt { font: 400 12px var(--font-mono); color: var(--muted); }
+.var dd { margin: 0; font: 600 18px var(--font-mono); font-variant-numeric: tabular-nums; }
+.var.changed { border-color: var(--accent); background: var(--range); }
+.var.changed dd { color: var(--range-ink); }
+.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 0; overflow-x: auto; font: 13px/1.6 var(--font-mono); }
+@media (max-width: 560px) { .code { font-size: 12px; } }
+.ln { display: block; padding: 0 14px 0 11px; white-space: pre; border-left: 3px solid transparent; }
+.ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
+.kw { color: var(--kw); }
+.nu { color: var(--num); }
+
+.why p { margin: 0; max-width: 66ch; color: var(--muted); }
+.why b { color: var(--ink); }
+:root { color-scheme: light; }
+body { margin: 0; }
+.foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+.foot a { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">LeetCode 74 · Search a 2D Matrix · Medium</p>
+    <h1>Matriste Binary Search</h1>
+    <p class="lead">Çözümün her adımını burada izleyebilirsin. Aranacak sayıyı seç, <b>İleri</b>'ye bas; matriste hangi hücreye bakıldığını ve kodun hangi satırının çalıştığını gör.</p>
+  </header>
+
+  <section aria-labelledby="idea-h">
+    <h2 id="idea-h">Fikir üç adımda</h2>
+    <ol class="idea">
+      <li>
+        <span class="n">1</span>
+        <h3>Sayı tahmin oyunu</h3>
+        <p>1 ile 100 arasında bir sayı tuttum; her tahmininde “daha büyük” ya da “daha küçük” diyorum. En akıllıca tahmin hep ortadan yapılır, çünkü her cevap kalan sayıların yarısını eler. Binary search budur.</p>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <h3>Matris aslında sıralı bir liste</h3>
+        <p>Her satır sıralı ve her satır, öncekinin son sayısından büyük başlıyor. Satırları uç uca eklersen tek bir sıralı liste çıkar: 1, 3, 5, 7, 10, 11, 16, 20, 23, 30, 34, 60. Tahmin oyununu bu listede oynayabiliriz.</p>
+      </li>
+      <li>
+        <span class="n">3</span>
+        <h3>Listeyi kopyalamadan oku</h3>
+        <p>Listenin <code>k</code>'inci sayısı matriste <code>satır = k / 4</code>, <code>sütun = k % 4</code> konumunda (4 = sütun sayısı). <code>/</code> küsuratı atar, <code>%</code> kalanı verir. Örneğin 9 / 4 = 2 ve 9 % 4 = 1, yani 9 numaralı sayı <code>matrix[2][1] = 30</code>.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="stepper" aria-labelledby="st-h">
+    <h2 id="st-h">Adım adım izle</h2>
+
+    <div class="controls">
+      <div class="target">
+        <div class="field">
+          <label for="target">Aranan sayı (target)</label>
+          <input id="target" type="number" value="13" step="1" min="-10000" max="10000" inputmode="numeric">
+        </div>
+        <div class="presets" role="group" aria-label="Hazır örnekler">
+          <button type="button" data-t="3" title="Matriste var">3 · var</button>
+          <button type="button" data-t="13" title="Matriste yok">13 · yok</button>
+          <button type="button" data-t="60" title="Son hücre">60 · son</button>
+          <button type="button" data-t="0" title="En küçük sayıdan da küçük">0 · yok</button>
+        </div>
+        <p class="err" id="target-err" hidden>-10000 ile 10000 arasında bir tam sayı yaz.</p>
+      </div>
+      <div class="nav">
+        <button type="button" id="reset">Baştan</button>
+        <button type="button" id="prev">← Geri</button>
+        <button type="button" id="next" class="primary">İleri →</button>
+      </div>
+    </div>
+
+    <div class="step" aria-live="polite">
+      <div class="step-meta"><span id="step-count"></span><span id="step-tag" class="tag"></span></div>
+      <p id="step-text"></p>
+    </div>
+
+    <div class="board">
+      <div class="col">
+        <p class="panel-label">Matris (köşedeki küçük sayı, hücrenin listedeki sırası)</p>
+        <div class="matrix" id="matrix"></div>
+        <p class="panel-label spaced">Aynı sayılar, tek sıra halinde</p>
+        <div class="strip-scroll"><div class="strip" id="strip"></div></div>
+        <p class="probe-text" id="probe"></p>
+        <div class="legend">
+          <span><i class="sw" data-state="in"></i>hâlâ aranan aralık</span>
+          <span><i class="sw" data-state="mid"></i>ortadaki (mid)</span>
+          <span><i class="sw" data-state="gone"></i>elendi</span>
+          <span><i class="sw" data-state="found"></i>bulundu</span>
+        </div>
+      </div>
+      <div class="col">
+        <p class="panel-label">Değişkenler</p>
+        <dl class="vars" id="vars"></dl>
+        <p class="panel-label spaced">Kod (Solution.cs içindeki metot)</p>
+        <div class="code" id="code" role="region" aria-label="C# kodu" tabindex="0"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-h">
+    <h2 id="why-h">Neden bu kadar hızlı?</h2>
+    <p>Her bakış, kalan aralığı yarıya indiriyor: 12 → 6 → 3 → 1. Bu 12 sayılık örnekte <b>en fazla 4 bakış</b> yeter. LeetCode'daki en büyük matriste (100 × 100 = 10.000 hücre) bile <b>en fazla 14 bakış</b> yeter. Bütün hücreleri tek tek gezseydik bu, 10.000 bakış demekti.</p>
+  </section>
+
+  <footer class="foot">
+    <a href="https://leetcode.com/problems/search-a-2d-matrix/">Soru: LeetCode 74</a>
+    <a href="https://github.com/physerkm/leetcode-solutions/blob/main/src/LeetCode/Problems/P0074_SearchA2DMatrix/Solution.cs">Kod: Solution.cs</a>
+    <a href="https://github.com/physerkm/leetcode-solutions">Repo: physerkm/leetcode-solutions</a>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var M = [[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 60]];
+  var ROWS = M.length, COLS = M[0].length, N = ROWS * COLS;
+  function $(id) { return document.getElementById(id); }
+  function rowOf(k) { return Math.floor(k / COLS); }
+  function colOf(k) { return k % COLS; }
+  function valOf(k) { return M[rowOf(k)][colOf(k)]; }
+
+  // Code panel: mirrors the method body in Solution.cs.
+  var CODE = [
+    ['rows', '<span class="kw">int</span> rows = matrix.Length;'],
+    ['cols', '<span class="kw">int</span> cols = matrix[<span class="nu">0</span>].Length;'],
+    ['', ''],
+    ['left', '<span class="kw">int</span> left = <span class="nu">0</span>;'],
+    ['right', '<span class="kw">int</span> right = rows * cols - <span class="nu">1</span>;'],
+    ['', ''],
+    ['while', '<span class="kw">while</span> (left &lt;= right)'],
+    ['', '{'],
+    ['mid', '    <span class="kw">int</span> mid = left + (right - left) / <span class="nu">2</span>;'],
+    ['value', '    <span class="kw">int</span> value = matrix[mid / cols][mid % cols];'],
+    ['', ''],
+    ['ifEq', '    <span class="kw">if</span> (value == target)'],
+    ['retTrue', '        <span class="kw">return</span> <span class="kw">true</span>;'],
+    ['', ''],
+    ['ifLt', '    <span class="kw">if</span> (value &lt; target)'],
+    ['setLeft', '        left = mid + <span class="nu">1</span>;'],
+    ['else', '    <span class="kw">else</span>'],
+    ['setRight', '        right = mid - <span class="nu">1</span>;'],
+    ['', '}'],
+    ['', ''],
+    ['retFalse', '<span class="kw">return</span> <span class="kw">false</span>;']
+  ];
+  $('code').innerHTML = CODE.map(function (l) {
+    return '<span class="ln"' + (l[0] ? ' data-id="' + l[0] + '"' : '') + '>' + (l[1] || ' ') + '</span>';
+  }).join('');
+  var codeLines = {};
+  Array.prototype.forEach.call(document.querySelectorAll('.ln[data-id]'), function (el) { codeLines[el.dataset.id] = el; });
+
+  // Matrix + strip
+  var cellEls = [], markEls = [];
+  for (var k = 0; k < N; k++) cellEls.push([]);
+  var mh = '<span></span>';
+  for (var c = 0; c < COLS; c++) mh += '<span class="mh">sütun ' + c + '</span>';
+  for (var r = 0; r < ROWS; r++) {
+    mh += '<span class="mr">satır ' + r + '</span>';
+    for (c = 0; c < COLS; c++) {
+      var kk = r * COLS + c;
+      mh += '<div class="cell" data-k="' + kk + '"><span class="k">' + kk + '</span><span class="v">' + M[r][c] + '</span></div>';
+    }
+  }
+  $('matrix').innerHTML = mh;
+
+  var sh = '';
+  for (r = 0; r < ROWS; r++) {
+    sh += '<div class="grp"><div class="grp-label">satır ' + r + '</div><div class="grp-cells">';
+    for (c = 0; c < COLS; c++) {
+      var k2 = r * COLS + c;
+      sh += '<div class="slot"><div class="scell" tabindex="0" data-k="' + k2 + '" aria-label="İndeks ' + k2 + ', değer ' + M[r][c] + '">' +
+        '<span class="v">' + M[r][c] + '</span><span class="k">' + k2 + '</span></div>' +
+        '<div class="marks" id="mk-' + k2 + '"></div></div>';
+    }
+    sh += '</div></div>';
+  }
+  $('strip').innerHTML = sh;
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-k]'), function (el) { cellEls[+el.dataset.k].push(el); });
+  for (k = 0; k < N; k++) markEls.push($('mk-' + k));
+
+  // Steps
+  var TAGS = { init: 'Başlangıç', look: 'Ortaya bak', goRight: 'Sağa daralt', goLeft: 'Sola daralt', found: 'Bulundu', end: 'Bulunamadı' };
+
+  function buildSteps(t) {
+    var S = [], left = 0, right = N - 1, looks = 0, lastMid = null, lastVal = null;
+    S.push({
+      kind: 'init', left: left, right: right, mid: null, value: null,
+      changed: ['rows', 'cols', 'left', 'right'], lines: ['rows', 'cols', 'left', 'right'],
+      text: 'Arama aralığı başta bütün liste: <code>left = 0</code>, <code>right = rows * cols - 1 = ' + ROWS + ' * ' + COLS + ' - 1 = ' + (N - 1) + '</code>. Aranan sayı: <b>' + t + '</b>.'
+    });
+    while (left <= right) {
+      var half = Math.floor((right - left) / 2), mid = left + half, r = rowOf(mid), c = colOf(mid), v = M[r][c];
+      looks++; lastMid = mid; lastVal = v;
+      var txt = 'Aralığın ortası: <code>mid = ' + left + ' + (' + right + ' - ' + left + ') / 2 = ' + mid + '</code>.';
+      if ((right - left) % 2 === 1) txt += ' (C#\'ta tam sayı bölmesi küsuratı atar: ' + (right - left) + ' / 2 = ' + half + '.)';
+      txt += ' Bu sıra numarası matriste <code>satır = ' + mid + ' / ' + COLS + ' = ' + r + '</code>, <code>sütun = ' + mid + ' % ' + COLS + ' = ' + c + '</code> konumunda. Yani <code>value = matrix[' + r + '][' + c + '] = ' + v + '</code>.';
+      S.push({ kind: 'look', left: left, right: right, mid: mid, value: v, changed: ['mid', 'value'], lines: ['while', 'mid', 'value'], text: txt });
+
+      if (v === t) {
+        S.push({
+          kind: 'found', left: left, right: right, mid: mid, value: v, changed: [], lines: ['ifEq', 'retTrue'],
+          text: '<code>' + v + ' == ' + t + '</code>: aradığımız sayı bu. <code>return true</code>. ' + N + ' hücreden yalnızca ' + looks + ' tanesine baktık.'
+        });
+        return S;
+      }
+      if (v < t) {
+        var goneR = mid - left + 1;
+        left = mid + 1;
+        S.push({
+          kind: 'goRight', left: left, right: right, mid: mid, value: v, changed: ['left'], lines: ['ifLt', 'setLeft'],
+          text: '<code>' + v + ' &lt; ' + t + '</code>. Liste sıralı olduğu için ' + v + ' ve solundaki her sayı ' + t + ' sayısından küçük. Hedef varsa sağ taraftadır: <code>left = mid + 1 = ' + left + '</code>. Bu adımda ' + goneR + ' sayı elendi.'
+        });
+      } else {
+        var goneL = right - mid + 1;
+        right = mid - 1;
+        S.push({
+          kind: 'goLeft', left: left, right: right, mid: mid, value: v, changed: ['right'], lines: ['ifLt', 'else', 'setRight'],
+          text: '<code>' + v + ' &gt; ' + t + '</code>. Liste sıralı olduğu için ' + v + ' ve sağındaki her sayı ' + t + ' sayısından büyük. Hedef varsa sol taraftadır: <code>right = mid - 1 = ' + right + '</code>. Bu adımda ' + goneL + ' sayı elendi.'
+        });
+      }
+    }
+    S.push({
+      kind: 'end', left: left, right: right, mid: lastMid, value: lastVal, changed: [], lines: ['while', 'retFalse'],
+      text: '<code>left = ' + left + '</code>, <code>right = ' + right + '</code>. left, right\'tan büyük olduğu için <code>while (left &lt;= right)</code> koşulu artık yanlış. Bakılacak sayı kalmadı, yani ' + t + ' matriste yok: <code>return false</code>. ' + N + ' hücreden ' + looks + ' tanesine bakarak karar verdik.'
+    });
+    return S;
+  }
+
+  function cellState(s, k) {
+    var showMid = s.kind === 'look';
+    if (s.kind === 'found' && k === s.mid) return 'found';
+    if (showMid && k === s.mid) return 'mid';
+    return (k >= s.left && k <= s.right) ? 'in' : 'gone';
+  }
+
+  var target = 13, steps = buildSteps(target), idx = 0;
+
+  function render() {
+    var s = steps[idx];
+    for (var k = 0; k < N; k++) {
+      var st = cellState(s, k);
+      var wasMid = (s.kind === 'goRight' || s.kind === 'goLeft') && k === s.mid ? '1' : '0';
+      cellEls[k].forEach(function (el) { el.dataset.state = st; el.dataset.wasMid = wasMid; });
+      var tags = [];
+      if (k === s.left) tags.push('left');
+      if ((s.kind === 'look' || s.kind === 'found') && k === s.mid) tags.push('mid');
+      if (k === s.right) tags.push('right');
+      markEls[k].innerHTML = tags.length
+        ? '<span class="arrow" aria-hidden="true">▲</span>' + tags.map(function (t) { return '<span class="mark-' + t + '">' + t + '</span>'; }).join('')
+        : '';
+    }
+
+    var vars = [['rows', ROWS], ['cols', COLS], ['left', s.left], ['right', s.right], ['mid', s.mid], ['value', s.value]];
+    $('vars').innerHTML = vars.map(function (v) {
+      var cls = s.changed.indexOf(v[0]) >= 0 ? ' changed' : '';
+      return '<div class="var' + cls + '"><dt>' + v[0] + '</dt><dd>' + (v[1] === null ? '—' : v[1]) + '</dd></div>';
+    }).join('');
+
+    Object.keys(codeLines).forEach(function (id) { codeLines[id].classList.toggle('hl', s.lines.indexOf(id) >= 0); });
+
+    $('step-count').textContent = 'Adım ' + (idx + 1) + ' / ' + steps.length;
+    $('step-tag').textContent = TAGS[s.kind];
+    $('step-tag').dataset.kind = s.kind;
+    $('step-text').innerHTML = s.text;
+    $('prev').disabled = idx === 0;
+    $('reset').disabled = idx === 0;
+    $('next').disabled = idx === steps.length - 1;
+
+    Array.prototype.forEach.call(document.querySelectorAll('.presets button'), function (b) {
+      b.setAttribute('aria-pressed', String(+b.dataset.t === target));
+    });
+  }
+
+  function restart(t) { target = t; steps = buildSteps(t); idx = 0; render(); }
+
+  $('next').addEventListener('click', function () { if (idx < steps.length - 1) { idx++; render(); } });
+  $('prev').addEventListener('click', function () { if (idx > 0) { idx--; render(); } });
+  $('reset').addEventListener('click', function () { idx = 0; render(); });
+  Array.prototype.forEach.call(document.querySelectorAll('.presets button'), function (b) {
+    b.addEventListener('click', function () { $('target').value = b.dataset.t; $('target-err').hidden = true; restart(+b.dataset.t); });
+  });
+  $('target').addEventListener('input', function (e) {
+    var raw = e.target.value.trim(), t = Number(raw);
+    if (raw === '' || !Number.isInteger(t) || t < -10000 || t > 10000) { $('target-err').hidden = false; return; }
+    $('target-err').hidden = true;
+    restart(t);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+  });
+
+  // Index probe: shows where a list position lives in the matrix.
+  var DEFAULT_PROBE = 'Bir kutunun üzerine gel ya da dokun: o sıra numarasının matristeki yerini burada görürsün.';
+  var probed = null;
+  function probe(k) {
+    if (probed !== null) cellEls[probed].forEach(function (el) { el.classList.remove('probe'); });
+    probed = k;
+    if (k === null) { $('probe').textContent = DEFAULT_PROBE; return; }
+    cellEls[k].forEach(function (el) { el.classList.add('probe'); });
+    $('probe').innerHTML = 'Sıra <b>' + k + '</b> → satır = ' + k + ' / ' + COLS + ' = ' + rowOf(k) + ', sütun = ' + k + ' % ' + COLS + ' = ' + colOf(k) + ' → <code>matrix[' + rowOf(k) + '][' + colOf(k) + '] = ' + valOf(k) + '</code>';
+  }
+  ['matrix', 'strip'].forEach(function (id) {
+    var host = $(id);
+    host.addEventListener('pointerover', function (e) { var el = e.target.closest('[data-k]'); if (el) probe(+el.dataset.k); });
+    host.addEventListener('pointerleave', function () { probe(null); });
+    host.addEventListener('focusin', function (e) { var el = e.target.closest('[data-k]'); if (el) probe(+el.dataset.k); });
+    host.addEventListener('focusout', function () { probe(null); });
+  });
+
+  probe(null);
+  render();
+})();
+</script>
+</body>
+</html>
