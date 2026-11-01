@@ -1,0 +1,5 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Shared settings live in Directory.Build.props at the repo root. -->
+
+</Project>

@@ -1,0 +1,18 @@
+<Project>
+
+  <!-- Shared by every project in this repo. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- LeetCode's starter code (e.g. `ListNode next = null`) assumes nullable reference types are off. -->
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- ListNode/TreeNode are available everywhere without a using, just like on LeetCode. -->
+    <Using Include="LeetCode.Common" />
+    <Using Include="System.Text" />
+  </ItemGroup>
+
+</Project>
