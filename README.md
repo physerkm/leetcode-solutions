@@ -7,6 +7,7 @@ LeetCode'da çözdüğüm soruların C# çözümleri.
 | # | Soru | Zorluk | Çözüm |
 |---|------|--------|-------|
 | 1 | [Two Sum](https://leetcode.com/problems/two-sum/) | Easy | [C#](src/LeetCode/Problems/P0001_TwoSum/Solution.cs) |
+| 74 | [Search a 2D Matrix](https://leetcode.com/problems/search-a-2d-matrix/) | Medium | [C#](src/LeetCode/Problems/P0074_SearchA2DMatrix/Solution.cs) |
 
 ## Proje yapısı
 
