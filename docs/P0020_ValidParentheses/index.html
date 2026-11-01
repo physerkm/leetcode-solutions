@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Yığınla Parantez Kontrolü</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: one reading column; the stepper is a single tool panel (controls, step card, text + stack | code) that stacks on phones. */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --ink: #141b26;
+  --muted: #5a6779;
+  --line: #d6dce6;
+  --accent: #3346c8;
+  --accent-ink: #ffffff;
+  --range: #e3e9fb;
+  --range-ink: #1d2a6b;
+  --good: #17824a;
+  --good-ink: #ffffff;
+  --good-soft: #dcf1e4;
+  --good-soft-ink: #145c36;
+  --bad: #b8402a;
+  --bad-ink: #ffffff;
+  --bad-soft: #f9e3dd;
+  --code-bg: #f7f8fb;
+  --code-hl: #dfe5fb;
+  --kw: #7a3aa8;
+  --num: #a35a00;
+  --str: #0f7a5a;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+    --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+    --good: #3fbf7a; --good-ink: #06150d; --good-soft: #14301f; --good-soft-ink: #8fe0b2;
+    --bad: #ff7d66; --bad-ink: #1a0905; --bad-soft: #3a1c17;
+    --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0; --num: #f0b45c; --str: #7fd6b0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+  --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+  --good: #3fbf7a; --good-ink: #06150d; --good-soft: #14301f; --good-soft-ink: #8fe0b2;
+  --bad: #ff7d66; --bad-ink: #1a0905; --bad-soft: #3a1c17;
+  --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0; --num: #f0b45c; --str: #7fd6b0;
+  color-scheme: dark;
+}
+
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
+.wrap {
+  max-width: 1040px; margin: 0 auto;
+  padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px;
+}
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--muted); margin: 0; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 6vw, 54px); line-height: 1.05; letter-spacing: -.02em; margin: 8px 0 14px; text-wrap: balance; }
+.lead { max-width: 62ch; color: var(--muted); margin: 0; font-size: 17px; }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -.01em; margin: 0 0 18px; text-wrap: balance; }
+code { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+
+/* Idea */
+.idea { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; list-style: none; padding: 0; margin: 0; }
+.idea li { border-top: 2px solid var(--ink); padding-top: 12px; min-width: 0; }
+.idea .n { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.idea h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 2px 0 6px; text-wrap: balance; }
+.idea p { margin: 0; color: var(--muted); font-size: 15px; }
+@media (max-width: 760px) { .idea { grid-template-columns: 1fr; gap: 20px; } }
+
+/* Stepper panel */
+.stepper { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+@media (max-width: 560px) { .stepper { padding: 16px; } }
+.stepper h2 { margin: 0; }
+.controls { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+.field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+input[type="text"] { width: 12em; max-width: 100%; font: 600 20px var(--font-mono); letter-spacing: .08em; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.err { margin: 0; font-size: 13px; color: var(--bad); }
+button { font: 500 14px var(--font-body); padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .4; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.presets button { font-size: 13px; padding: 7px 10px; }
+.presets .mono { font-family: var(--font-mono); font-weight: 700; margin-right: 4px; }
+.presets button[aria-pressed="true"] { border-color: var(--accent); background: var(--range); color: var(--range-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav { display: flex; gap: 8px; }
+
+.step { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+.step-meta { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag { font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--range); color: var(--range-ink); }
+.tag[data-kind="ok"] { background: var(--good); color: var(--good-ink); }
+.tag[data-kind="bad"] { background: var(--bad); color: var(--bad-ink); }
+#step-text { margin: 8px 0 0; font-size: 16.5px; max-width: 78ch; min-height: 3.2em; }
+
+.board { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; }
+@media (max-width: 880px) { .board { grid-template-columns: 1fr; } }
+.col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.panel-label { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0; }
+.spaced { margin-top: 12px; }
+
+/* Text tiles */
+.tiles { display: flex; flex-wrap: wrap; gap: 6px; }
+.tile-wrap { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.tile { width: 40px; height: 46px; border-radius: 8px; display: grid; place-items: center; font: 700 22px var(--font-mono); border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.tile-i { font: 400 10px var(--font-mono); color: var(--muted); }
+.tile[data-state="waiting"] { background: var(--range); color: var(--range-ink); border-color: transparent; }
+.tile[data-state="matched"] { background: var(--good-soft); color: var(--good-soft-ink); border-color: transparent; }
+.tile[data-state="bad"] { background: var(--bad-soft); color: var(--bad); border-color: var(--bad); }
+.tile.cur { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.tile.cur[data-state="bad"] { background: var(--bad); color: var(--bad-ink); border-color: var(--bad); }
+
+/* Stack */
+.stack-area { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: flex-end; }
+.stack { display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; width: 160px; min-height: 64px; padding: 8px; border: 2px solid var(--line); border-top: none; border-radius: 0 0 14px 14px; }
+.plate { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 3px 12px; border-radius: 999px; background: var(--range); color: var(--range-ink); font: 700 18px var(--font-mono); }
+.plate small { font: 400 11px var(--font-mono); opacity: .85; }
+.plate.new { background: var(--accent); color: var(--accent-ink); }
+.plate.bad { background: var(--bad-soft); color: var(--bad); }
+.empty { text-align: center; font-size: 13px; color: var(--muted); padding: 6px 0; }
+.popped { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; font-size: 13px; color: var(--muted); }
+.chip { font: 700 20px var(--font-mono); padding: 4px 16px; min-width: 52px; text-align: center; border-radius: 999px; border: 1px dashed var(--line); color: var(--muted); }
+.chip[data-state="matched"] { background: var(--good-soft); color: var(--good-soft-ink); border: 1px solid transparent; }
+.chip[data-state="bad"] { background: var(--bad-soft); color: var(--bad); border: 1px solid var(--bad); }
+
+.tile, .plate, .chip { transition: background-color .2s, color .2s, border-color .2s; }
+@media (prefers-reduced-motion: reduce) { .tile, .plate, .chip { transition: none; } }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin-top: 8px; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; border: 1px solid var(--line); }
+.sw.todo { background: var(--surface); }
+.sw.cur { background: var(--accent); border-color: var(--accent); }
+.sw.waiting { background: var(--range); }
+.sw.matched { background: var(--good-soft); }
+.sw.bad { background: var(--bad-soft); border-color: var(--bad); }
+
+/* Variables + code */
+.vars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.var { border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; background: var(--bg); }
+.var dt { font: 400 12px var(--font-mono); color: var(--muted); }
+.var dd { margin: 0; font: 600 18px var(--font-mono); font-variant-numeric: tabular-nums; }
+.var.changed { border-color: var(--accent); background: var(--range); }
+.var.changed dd { color: var(--range-ink); }
+.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 0; overflow-x: auto; font: 13px/1.6 var(--font-mono); }
+@media (max-width: 560px) { .code { font-size: 12px; } }
+.ln { display: block; padding: 0 14px 0 11px; white-space: pre; border-left: 3px solid transparent; }
+.ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
+.kw { color: var(--kw); }
+.nu { color: var(--num); }
+.st { color: var(--str); }
+
+.why p { margin: 0; max-width: 66ch; color: var(--muted); }
+.why b { color: var(--ink); }
+.foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+.foot a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">LeetCode 20 · Valid Parentheses · Easy</p>
+    <h1>Yığınla Parantez Kontrolü</h1>
+    <p class="lead">Çözümün her adımını burada izleyebilirsin. Bir metin seç, <b>İleri</b>'ye bas; hangi karakterin okunduğunu, yığının nasıl dolup boşaldığını ve kodun hangi satırının çalıştığını gör.</p>
+  </header>
+
+  <section aria-labelledby="idea-h">
+    <h2 id="idea-h">Fikir üç adımda</h2>
+    <ol class="idea">
+      <li>
+        <span class="n">1</span>
+        <h3>Tabak yığını</h3>
+        <p>Açılan her parantezi bir tabak gibi üst üste koy. Yığında sadece en üstteki tabağa erişebilirsin: en son konan, ilk alınan olur. C#'ta bunun hazır sınıfı <code>Stack&lt;char&gt;</code>.</p>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <h3>Kapanan, en son açılanı kapatır</h3>
+        <p><code>{[()]}</code> metninde <code>)</code> geldiğinde kapatması gereken <code>(</code>, yani en son açılan. O da yığının en üstünde duruyor. Üstteki aynı türden değilse metin geçersiz.</p>
+      </li>
+      <li>
+        <span class="n">3</span>
+        <h3>Sonunda yığın boş olmalı</h3>
+        <p>Metin bittiğinde yığında parantez kaldıysa bunlar açılıp hiç kapanmamış demektir. <code>((</code> bu yüzden geçersiz. Boş yığındayken gelen kapanan parantez de geçersiz: <code>)</code></p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="stepper" aria-labelledby="st-h">
+    <h2 id="st-h">Adım adım izle</h2>
+
+    <div class="controls">
+      <div class="row">
+        <div class="field">
+          <label for="text">Metin (s)</label>
+          <input id="text" type="text" value="([])" maxlength="16" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="nav">
+          <button type="button" id="reset">Baştan</button>
+          <button type="button" id="prev">← Geri</button>
+          <button type="button" id="next" class="primary">İleri →</button>
+        </div>
+      </div>
+      <div class="presets" role="group" aria-label="Hazır örnekler">
+        <button type="button" data-s="([])"><span class="mono">([])</span>geçerli</button>
+        <button type="button" data-s="{[()]}"><span class="mono">{[()]}</span>iç içe</button>
+        <button type="button" data-s="()[]{}"><span class="mono">()[]{}</span>yan yana</button>
+        <button type="button" data-s="([)]"><span class="mono">([)]</span>sıra yanlış</button>
+        <button type="button" data-s="(]"><span class="mono">(]</span>tür yanlış</button>
+        <button type="button" data-s="(("><span class="mono">((</span>kapanmadı</button>
+        <button type="button" data-s=")"><span class="mono">)</span>fazla kapanan</button>
+      </div>
+      <p class="err" id="text-err" hidden>Sadece ( ) [ ] { } karakterlerini kullan; en az 1, en fazla 16 karakter.</p>
+    </div>
+
+    <div class="step" aria-live="polite">
+      <div class="step-meta"><span id="step-count"></span><span id="step-tag" class="tag"></span></div>
+      <p id="step-text"></p>
+    </div>
+
+    <div class="board">
+      <div class="col">
+        <p class="panel-label">Metin (altındaki küçük sayı karakterin sırası)</p>
+        <div class="tiles" id="tiles"></div>
+        <div class="legend">
+          <span><i class="sw todo"></i>henüz okunmadı</span>
+          <span><i class="sw cur"></i>şu an okunan</span>
+          <span><i class="sw waiting"></i>yığında bekliyor</span>
+          <span><i class="sw matched"></i>eşleşti</span>
+          <span><i class="sw bad"></i>hatalı</span>
+        </div>
+        <p class="panel-label spaced">Yığın (en üstteki en yukarıda)</p>
+        <div class="stack-area">
+          <div class="stack" id="stack"></div>
+          <div class="popped">
+            <span>Pop() ile çıkan</span>
+            <span class="chip" id="popped-chip">—</span>
+          </div>
+        </div>
+      </div>
+      <div class="col">
+        <p class="panel-label">Değişkenler</p>
+        <dl class="vars" id="vars"></dl>
+        <p class="panel-label spaced">Kod (Solution.cs içindeki metot)</p>
+        <div class="code" id="code" role="region" aria-label="C# kodu" tabindex="0"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-h">
+    <h2 id="why-h">Neden O(n)?</h2>
+    <p>Her karakteri bir kez okuyoruz ve her parantez yığına en fazla bir kez girip bir kez çıkıyor. Metin 10.000 karakter de olsa yaklaşık 10.000 adımda biter: <b>O(n) zaman</b>. En kötü durumda, örneğin metin sadece açılan parantezlerden oluşuyorsa, hepsi yığına girer: <b>O(n) bellek</b>.</p>
+  </section>
+
+  <footer class="foot">
+    <a href="https://leetcode.com/problems/valid-parentheses/">Soru: LeetCode 20</a>
+    <a href="https://github.com/physerkm/leetcode-solutions/blob/main/src/LeetCode/Problems/P0020_ValidParentheses/Solution.cs">Kod: Solution.cs</a>
+    <a href="../">Tüm anlatımlar</a>
+    <a href="https://github.com/physerkm/leetcode-solutions">Repo: physerkm/leetcode-solutions</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  // Steps: mirrors Solution.cs line by line.
+  const OPEN_FOR = { ')': '(', ']': '[', '}': '{' };
+
+  function buildSteps(s) {
+    const steps = [];
+    const stack = [];
+    const states = Array.from(s, () => 'todo');
+    const snap = (step) => {
+      step.states = states.slice();
+      step.stack = stack.map((x) => ({ ch: x.ch, i: x.i }));
+      steps.push(step);
+    };
+
+    snap({ kind: 'init', cur: -1, c: null, open: null, popped: null, lines: ['stack'],
+      text: `Boş bir yığınla başlıyoruz. Metni soldan sağa, karakter karakter okuyacağız: <code>${s}</code>` });
+
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i];
+
+      if (c === '(' || c === '[' || c === '{') {
+        stack.push({ ch: c, i });
+        states[i] = 'waiting';
+        snap({ kind: 'push', cur: i, c, open: null, popped: null, lines: ['foreach', 'ifOpen', 'push'],
+          text: `<code>${c}</code> açılan bir parantez. Kapanmasını beklemek için yığının üstüne koyuyoruz: <code>stack.Push('${c}')</code>. Yığında artık ${stack.length} parantez var.` });
+        continue;
+      }
+
+      const check = c === ')' ? 'chk1' : c === ']' ? 'chk2' : 'chk3';
+
+      if (stack.length === 0) {
+        states[i] = 'bad';
+        snap({ kind: 'emptyFail', cur: i, c, open: null, popped: null, lines: ['foreach', 'else', 'ifEmpty', 'retEmpty'],
+          text: `<code>${c}</code> kapanan bir parantez ama yığın boş. Kapatılacak açık bir parantez yok, yani bu parantez fazladan: <code>return false</code>.` });
+        return steps;
+      }
+
+      const top = stack.pop();
+      const expected = OPEN_FOR[c];
+
+      if (top.ch === expected) {
+        states[i] = 'matched';
+        states[top.i] = 'matched';
+        snap({ kind: 'match', cur: i, c, open: top.ch, popped: { ch: top.ch, ok: true }, lines: ['foreach', 'else', 'ifEmpty', 'pop', check],
+          text: `<code>${c}</code> kapanan bir parantez. Yığının en üstündeki <code>${top.ch}</code> çıkarıldı (<code>Pop</code>). İkisi aynı türden, eşleşiyor ✓. Bu çift tamam; sıradaki karaktere geçiyoruz.` });
+      } else {
+        states[i] = 'bad';
+        states[top.i] = 'bad';
+        const deeper = stack.some((x) => x.ch === expected);
+        const why = deeper
+          ? `Aranan <code>${expected}</code> yığında daha aşağıda. Yani en son açılan parantez kapanmadan başka bir parantez kapatılmaya çalışıldı: sıra yanlış.`
+          : 'Parantez türleri farklı: tür yanlış.';
+        snap({ kind: 'mismatch', cur: i, c, open: top.ch, popped: { ch: top.ch, ok: false }, lines: ['foreach', 'else', 'ifEmpty', 'pop', check],
+          text: `<code>${c}</code> kapanan bir parantez. Yığının en üstündeki <code>${top.ch}</code> çıkarıldı (<code>Pop</code>). Ama <code>${c}</code> ancak <code>${expected}</code> ile eşleşebilir ✗. ${why} <code>return false</code>.` });
+        return steps;
+      }
+    }
+
+    if (stack.length === 0) {
+      snap({ kind: 'okEnd', cur: -1, c: null, open: null, popped: null, lines: ['retEnd'],
+        text: 'Metin bitti ve yığın boş. Açılan her parantez doğru türle ve doğru sırayla kapandı: <code>return stack.Count == 0</code> → <code>true</code>.' });
+    } else {
+      stack.forEach((x) => { states[x.i] = 'bad'; });
+      const left = stack.map((x) => `<code>${x.ch}</code>`).join(' ');
+      snap({ kind: 'leftFail', cur: -1, c: null, open: null, popped: null, lines: ['retEnd'],
+        text: `Metin bitti ama yığında ${stack.length} parantez kaldı: ${left}. Bunlar açıldı ama hiç kapanmadı: <code>return stack.Count == 0</code> → <code>false</code>.` });
+    }
+    return steps;
+  }
+
+  // Rendering
+  const CODE = [
+    ['stack', `<span class="kw">var</span> stack = <span class="kw">new</span> Stack&lt;<span class="kw">char</span>&gt;();`],
+    ['', ''],
+    ['foreach', `<span class="kw">foreach</span> (<span class="kw">char</span> c <span class="kw">in</span> s)`],
+    ['', '{'],
+    ['ifOpen', `    <span class="kw">if</span> (c == <span class="st">'('</span> || c == <span class="st">'['</span> || c == <span class="st">'{'</span>)`],
+    ['', '    {'],
+    ['push', '        stack.Push(c);'],
+    ['', '    }'],
+    ['else', `    <span class="kw">else</span>`],
+    ['', '    {'],
+    ['ifEmpty', `        <span class="kw">if</span> (stack.Count == <span class="nu">0</span>)`],
+    ['retEmpty', `            <span class="kw">return</span> <span class="kw">false</span>;`],
+    ['', ''],
+    ['pop', `        <span class="kw">char</span> open = stack.Pop();`],
+    ['', ''],
+    ['chk1', `        <span class="kw">if</span> (c == <span class="st">')'</span> &amp;&amp; open != <span class="st">'('</span>) <span class="kw">return</span> <span class="kw">false</span>;`],
+    ['chk2', `        <span class="kw">if</span> (c == <span class="st">']'</span> &amp;&amp; open != <span class="st">'['</span>) <span class="kw">return</span> <span class="kw">false</span>;`],
+    ['chk3', `        <span class="kw">if</span> (c == <span class="st">'}'</span> &amp;&amp; open != <span class="st">'{'</span>) <span class="kw">return</span> <span class="kw">false</span>;`],
+    ['', '    }'],
+    ['', '}'],
+    ['', ''],
+    ['retEnd', `<span class="kw">return</span> stack.Count == <span class="nu">0</span>;`],
+  ];
+  $('code').innerHTML = CODE.map(([id, html]) => `<span class="ln"${id ? ` data-id="${id}"` : ''}>${html || ' '}</span>`).join('');
+  const codeLines = {};
+  document.querySelectorAll('.ln[data-id]').forEach((el) => { codeLines[el.dataset.id] = el; });
+
+  const TAGS = {
+    init: ['Başlangıç', ''], push: ['Yığına koy', ''], match: ['Eşleşti', ''],
+    emptyFail: ['Geçersiz', 'bad'], mismatch: ['Geçersiz', 'bad'], leftFail: ['Geçersiz', 'bad'], okEnd: ['Geçerli', 'ok'],
+  };
+  const VALID = /^[()[\]{}]{1,16}$/;
+
+  let text = '([])';
+  let steps = [];
+  let idx = 0;
+  let tiles = [];
+
+  function restart(s) {
+    text = s;
+    steps = buildSteps(s);
+    idx = 0;
+    $('tiles').innerHTML = Array.from(s, (ch, k) =>
+      `<div class="tile-wrap"><div class="tile" aria-label="Sıra ${k}: ${ch}">${ch}</div><span class="tile-i">${k}</span></div>`).join('');
+    tiles = Array.from(document.querySelectorAll('#tiles .tile'));
+    render();
+  }
+
+  function render() {
+    const st = steps[idx];
+
+    tiles.forEach((el, k) => {
+      el.dataset.state = st.states[k];
+      el.classList.toggle('cur', k === st.cur);
+    });
+
+    const items = st.stack.slice().reverse();
+    $('stack').innerHTML = items.length === 0
+      ? '<div class="empty">boş</div>'
+      : items.map((x, j) => {
+          let cls = 'plate';
+          if (j === 0 && st.kind === 'push') cls += ' new';
+          if (st.kind === 'leftFail') cls += ' bad';
+          return `<div class="${cls}"><span>${x.ch}</span><small>s[${x.i}]${j === 0 ? ' · en üst' : ''}</small></div>`;
+        }).join('');
+
+    const chip = $('popped-chip');
+    chip.textContent = st.popped ? st.popped.ch : '—';
+    chip.dataset.state = st.popped ? (st.popped.ok ? 'matched' : 'bad') : 'none';
+
+    const changed = new Set();
+    if (st.c !== null) changed.add('c');
+    if (st.open !== null) changed.add('open');
+    if (['push', 'match', 'mismatch'].includes(st.kind)) changed.add('count');
+    const vars = [
+      ['c', 'c', st.c === null ? '—' : `'${st.c}'`],
+      ['open', 'open', st.open === null ? '—' : `'${st.open}'`],
+      ['count', 'stack.Count', st.stack.length],
+    ];
+    $('vars').innerHTML = vars.map(([key, name, value]) =>
+      `<div class="var${changed.has(key) ? ' changed' : ''}"><dt>${name}</dt><dd>${value}</dd></div>`).join('');
+
+    Object.keys(codeLines).forEach((id) => codeLines[id].classList.toggle('hl', st.lines.includes(id)));
+
+    const [tagText, tagKind] = TAGS[st.kind];
+    $('step-count').textContent = `Adım ${idx + 1} / ${steps.length}`;
+    $('step-tag').textContent = tagText;
+    $('step-tag').dataset.kind = tagKind;
+    $('step-text').innerHTML = st.text;
+    $('prev').disabled = idx === 0;
+    $('reset').disabled = idx === 0;
+    $('next').disabled = idx === steps.length - 1;
+
+    document.querySelectorAll('.presets button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.s === text)));
+  }
+
+  $('next').addEventListener('click', () => { if (idx < steps.length - 1) { idx++; render(); } });
+  $('prev').addEventListener('click', () => { if (idx > 0) { idx--; render(); } });
+  $('reset').addEventListener('click', () => { idx = 0; render(); });
+  document.querySelectorAll('.presets button').forEach((b) => b.addEventListener('click', () => {
+    $('text').value = b.dataset.s;
+    $('text-err').hidden = true;
+    restart(b.dataset.s);
+  }));
+  $('text').addEventListener('input', (e) => {
+    const s = e.target.value.replace(/\s+/g, '');
+    if (!VALID.test(s)) { $('text-err').hidden = false; return; }
+    $('text-err').hidden = true;
+    restart(s);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next').click();
+    else if (e.key === 'ArrowLeft') $('prev').click();
+  });
+
+  restart(text);
+})();
+</script>
+</body>
+</html>
