@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kayıp Sayıları Bulmak</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: one reading column; the stepper is a single tool panel (controls, step card, array, then variables + result | code) that stacks on phones. */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --ink: #141b26;
+  --muted: #5a6779;
+  --line: #d6dce6;
+  --accent: #3346c8;
+  --accent-ink: #ffffff;
+  --range: #e3e9fb;
+  --range-ink: #1d2a6b;
+  --good: #17824a;
+  --miss: #b86a00;
+  --miss-soft: #fdeccc;
+  --miss-soft-ink: #6b3d00;
+  --bad: #b8402a;
+  --code-bg: #f7f8fb;
+  --code-hl: #dfe5fb;
+  --kw: #7a3aa8;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+    --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+    --good: #3fbf7a; --miss: #e6a23c; --miss-soft: #3a2a10; --miss-soft-ink: #f5c77a; --bad: #ff7d66;
+    --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+  --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+  --good: #3fbf7a; --miss: #e6a23c; --miss-soft: #3a2a10; --miss-soft-ink: #f5c77a; --bad: #ff7d66;
+  --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0;
+  color-scheme: dark;
+}
+
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
+.wrap {
+  max-width: 1040px; margin: 0 auto;
+  padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px;
+}
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--muted); margin: 0; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 6vw, 54px); line-height: 1.05; letter-spacing: -.02em; margin: 8px 0 14px; text-wrap: balance; }
+.lead { max-width: 62ch; color: var(--muted); margin: 0; font-size: 17px; }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -.01em; margin: 0 0 18px; text-wrap: balance; }
+code { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+
+/* Idea */
+.idea { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; list-style: none; padding: 0; margin: 0; }
+.idea li { border-top: 2px solid var(--ink); padding-top: 12px; min-width: 0; }
+.idea .n { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.idea h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 2px 0 6px; text-wrap: balance; }
+.idea p { margin: 0; color: var(--muted); font-size: 15px; }
+@media (max-width: 760px) { .idea { grid-template-columns: 1fr; gap: 20px; } }
+
+/* Stepper panel */
+.stepper { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+@media (max-width: 560px) { .stepper { padding: 16px; } }
+.stepper h2 { margin: 0; }
+.controls { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+.field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+input[type="text"] { width: 16em; max-width: 100%; box-sizing: border-box; font: 600 18px var(--font-mono); padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.err { margin: 0; font-size: 13px; color: var(--bad); }
+button { font: 500 14px var(--font-body); padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .4; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.presets button { font-size: 13px; padding: 7px 10px; }
+.presets .mono { font-family: var(--font-mono); font-weight: 700; margin-right: 4px; }
+.presets button[aria-pressed="true"] { border-color: var(--accent); background: var(--range); color: var(--range-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav { display: flex; flex-wrap: wrap; gap: 8px; }
+#play { min-width: 7.5em; }
+
+.step { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+.step-meta { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag { font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--range); color: var(--range-ink); }
+.tag[data-kind="ok"] { background: var(--good); color: var(--surface); }
+.tag[data-kind="phase2"] { background: var(--miss-soft); color: var(--miss-soft-ink); }
+#step-text { margin: 8px 0 0; font-size: 16.5px; max-width: 78ch; min-height: 3.2em; }
+
+.panel-label { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 8px; }
+
+/* Array: one cell per box; the label under it says which number the box stands for. */
+.arr-scroll { overflow-x: auto; padding: 4px 6px 6px; }
+.arr { display: flex; gap: 8px; width: max-content; }
+.cell { display: flex; flex-direction: column; align-items: center; width: 58px; }
+.tags { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-height: 36px; padding-bottom: 6px; font: 600 11px/1.35 var(--font-mono); }
+.t-num { color: var(--ink); }
+.t-box { color: var(--accent); }
+.box {
+  width: 58px; height: 48px; box-sizing: border-box; border-radius: 10px;
+  display: grid; place-items: center;
+  font: 700 18px var(--font-mono); font-variant-numeric: tabular-nums;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  transition: background-color .2s, color .2s, border-color .2s;
+}
+.box[data-state="marked"] { background: var(--range); color: var(--range-ink); border-color: transparent; }
+.box[data-state="missing"] { background: var(--miss-soft); color: var(--miss-soft-ink); border-color: var(--miss); }
+.box.reading { outline: 2px dashed var(--muted); outline-offset: 3px; }
+.box.target { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .box { transition: none; } }
+.idx { margin-top: 8px; font: 500 12px var(--font-mono); color: var(--muted); }
+.owner { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.owner b { color: var(--ink); font-family: var(--font-mono); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin-top: 6px; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; border: 1px solid var(--line); }
+.sw.marked { background: var(--range); border-color: transparent; }
+.sw.missing { background: var(--miss-soft); border-color: var(--miss); }
+.sw.reading { background: transparent; border: 2px dashed var(--muted); }
+.sw.target { background: transparent; border: 2px solid var(--accent); }
+
+/* Variables + result | code */
+.board { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 28px; }
+@media (max-width: 880px) { .board { grid-template-columns: 1fr; } }
+.col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.vars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.var { border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; background: var(--bg); min-width: 0; }
+.var dt { font: 400 12px var(--font-mono); color: var(--muted); }
+.var dd { margin: 0; font: 600 18px var(--font-mono); font-variant-numeric: tabular-nums; }
+.var.changed { border-color: var(--accent); background: var(--range); }
+.var.changed dd { color: var(--range-ink); }
+.out { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--bg); }
+.out.changed { border-color: var(--accent); }
+.out span { display: block; font-size: 12px; color: var(--muted); }
+.out b { font: 600 16px var(--font-mono); overflow-wrap: anywhere; }
+.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 0; overflow-x: auto; font: 13px/1.6 var(--font-mono); }
+@media (max-width: 560px) { .code { font-size: 12px; } }
+.ln { display: block; padding: 0 14px 0 11px; white-space: pre; border-left: 3px solid transparent; }
+.ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
+.kw { color: var(--kw); }
+
+.why p { margin: 0 0 10px; max-width: 66ch; color: var(--muted); }
+.why p:last-child { margin-bottom: 0; }
+.why b { color: var(--ink); }
+.foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+.foot a { color: var(--accent); }
+
+/* No ligatures: `>` and `-` combos should look the way they are typed.
+   Kept last because the `font` shorthand above would reset it. */
+code, .code, .box, .var dd, .out b, input[type="text"] { font-variant-ligatures: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">LeetCode 448 · Find All Numbers Disappeared in an Array · Easy</p>
+    <h1>Kayıp Sayıları Bulmak</h1>
+    <p class="lead">Çözümün her adımını burada izleyebilirsin. Bir dizi seç, <b>İleri</b>'ye bas ya da <b>Oynat</b>'a tıkla; gördüğümüz her sayının kutusunun nasıl işaretlendiğini ve işaretsiz kalan kutuların kayıp sayıları nasıl gösterdiğini gör.</p>
+  </header>
+
+  <section aria-labelledby="idea-h">
+    <h2 id="idea-h">Fikir üç adımda</h2>
+    <ol class="idea">
+      <li>
+        <span class="n">1</span>
+        <h3>Her sayının bir kutusu var</h3>
+        <p>Sayılar 1 ile n arasında, dizide de tam n kutu var. <code>x</code> sayısının kutusu <code>nums[x - 1]</code>: 1'in kutusu <code>nums[0]</code>, 2'nin kutusu <code>nums[1]</code> ve böyle devam eder.</p>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <h3>Gördüğün sayının kutusunu işaretle</h3>
+        <p>Bir sayıyı görünce kutusundaki değeri negatif yap. Değer kaybolmaz, sadece işareti değişir; okurken <code>Math.Abs</code> ile asıl sayıya geri dönersin.</p>
+      </li>
+      <li>
+        <span class="n">3</span>
+        <h3>Pozitif kalan kutular kayıp</h3>
+        <p><code>nums[i]</code> sonunda hâlâ pozitifse <code>i + 1</code> sayısı dizide hiç yok demektir. Toplarken negatif kutuları da geri çevirip diziyi eski hâline getiriyoruz.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="stepper" aria-labelledby="st-h">
+    <h2 id="st-h">Adım adım izle</h2>
+
+    <div class="controls">
+      <div class="row">
+        <div class="field">
+          <label for="list">Dizi (virgülle ayır, en fazla 10 sayı)</label>
+          <input id="list" type="text" value="4, 3, 2, 7, 8, 2, 3, 1" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="nav">
+          <button type="button" id="reset">Baştan</button>
+          <button type="button" id="prev-btn">← Geri</button>
+          <button type="button" id="next-btn" class="primary">İleri →</button>
+          <button type="button" id="play">▶ Oynat</button>
+        </div>
+      </div>
+      <div class="presets" role="group" aria-label="Hazır örnekler">
+        <button type="button" data-l="4, 3, 2, 7, 8, 2, 3, 1"><span class="mono">[4,3,2,7,8,2,3,1]</span></button>
+        <button type="button" data-l="1, 1"><span class="mono">[1,1]</span></button>
+        <button type="button" data-l="5, 5, 5, 5, 5"><span class="mono">[5,5,5,5,5]</span>hep aynı sayı</button>
+        <button type="button" data-l="3, 1, 2"><span class="mono">[3,1,2]</span>kayıp yok</button>
+      </div>
+      <p class="err" id="list-err" hidden>Virgülle ayrılmış en az 1, en fazla 10 tam sayı yaz. Her sayı 1 ile dizinin uzunluğu arasında olmalı; örneğin 3 elemanlı bir dizide sadece 1, 2 ve 3 olabilir.</p>
+    </div>
+
+    <div class="step" aria-live="polite">
+      <div class="step-meta"><span id="step-count"></span><span id="step-tag" class="tag"></span></div>
+      <p id="step-text"></p>
+    </div>
+
+    <div>
+      <p class="panel-label">nums (her kutunun altında hangi sayının kutusu olduğu yazıyor)</p>
+      <div class="arr-scroll"><div class="arr" id="arr"></div></div>
+      <div class="legend">
+        <span><i class="sw marked"></i>negatif: bu sayı görüldü</span>
+        <span><i class="sw missing"></i>kayıp sayı, result'a eklendi</span>
+        <span><i class="sw reading"></i>okunan eleman (num)</span>
+        <span><i class="sw target"></i>bakılan kutu (box ya da i)</span>
+      </div>
+    </div>
+
+    <div class="board">
+      <div class="col">
+        <p class="panel-label">Değişkenler</p>
+        <dl class="vars" id="vars"></dl>
+        <div class="out" id="out"><span>result</span><b id="result"></b></div>
+      </div>
+      <div class="col">
+        <p class="panel-label">Kod (Solution.cs içindeki metot)</p>
+        <div class="code" id="code" role="region" aria-label="C# kodu" tabindex="0"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-h">
+    <h2 id="why-h">Neden O(1) ekstra bellek?</h2>
+    <p>Diziyi iki kez geziyoruz: <b>O(n) zaman</b>. İşaretleri ayrı bir dizide değil, <code>nums</code>'ın kendi kutularında, sayının işaretinde tutuyoruz. Fazladan sadece <code>num</code>, <code>box</code> ve <code>i</code> gibi birkaç değişken var: <b>O(1) ekstra bellek</b>. Döndürdüğümüz liste bu hesaba katılmıyor.</p>
+    <p>Daha kolay bir çözüm de var: görülen sayıları <code>bool[] seen = new bool[n + 1]</code> dizisinde işaretleyip sonra <code>false</code> kalanları toplamak. O da O(n) zamanda çalışır ama n + 1 elemanlık ayrı bir dizi açtığı için <b>O(n) bellek</b> kullanır. Bu sayfadaki çözüm aynı işaretlemeyi <code>nums</code>'ın içinde yaptığı için o diziye gerek kalmıyor.</p>
+    <p>İkinci döngüde negatif kutuları yeniden pozitife çeviriyoruz. Böylece metodu çağıran kod dizisini verdiği gibi geri alıyor. Bunun için ayrı bir döngü de gerekmiyor; kayıp sayıları toplarken aynı turda yapılıyor.</p>
+  </section>
+
+  <footer class="foot">
+    <a href="https://leetcode.com/problems/find-all-numbers-disappeared-in-an-array/">Soru: LeetCode 448</a>
+    <a href="https://github.com/physerkm/leetcode-solutions/blob/main/src/LeetCode/Problems/P0448_FindAllNumbersDisappearedInAnArray/Solution.cs">Kod: Solution.cs</a>
+    <a href="../">Tüm anlatımlar</a>
+    <a href="https://github.com/physerkm/leetcode-solutions">Repo: physerkm/leetcode-solutions</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const MAX_LEN = 10;
+
+  // Steps: mirrors Solution.cs line by line.
+  // readAt: the foreach element being read; target: the box being checked (box in loop 1, i in loop 2).
+  function buildSteps(vals) {
+    const n = vals.length;
+    const nums = vals.slice();
+    const result = [];
+    const missing = [];
+    const steps = [];
+    let num;
+    let box;
+    let i;
+    let phase = 'mark';
+    const snap = (s) => steps.push({
+      nums: nums.slice(), result: result.slice(), missing: missing.slice(),
+      num, box, i, phase, readAt: -1, target: -1, changed: [], ...s,
+    });
+
+    snap({
+      kind: 'start', lines: [],
+      text: `Dizide ${n} eleman var, yani sayılar 1 ile ${n} arasında. Her sayının bir kutusu var: <code>x</code> sayısının kutusu <code>nums[x - 1]</code>. Önce diziyi gezip gördüğümüz her sayının kutusunu negatif yaparak işaretleyeceğiz.`,
+    });
+
+    for (let j = 0; j < n; j++) {
+      num = nums[j];
+      const abs = Math.abs(num);
+      box = abs - 1;
+      snap({
+        kind: 'read', lines: ['foreach', 'box'], changed: ['num', 'box'], readAt: j, target: box,
+        text: `Sıradaki eleman <code>num = ${num}</code>.` +
+          (num < 0 ? ` Negatif, çünkü bu kutu daha önce işaretlendi; asıl sayı ${abs}.` : '') +
+          ` <code>box = Math.Abs(${num}) - 1</code> → ${box}. ${abs} sayısının kutusu <code>nums[${box}]</code>.`,
+      });
+
+      if (nums[box] > 0) {
+        const before = nums[box];
+        nums[box] = -before;
+        snap({
+          kind: 'mark', lines: ['if', 'neg'], readAt: j, target: box,
+          text: `<code>nums[${box}]</code> = ${before}, pozitif: ${abs} sayısını ilk kez görüyoruz. Kutuyu negatif yaparak işaretliyoruz: <code>nums[${box}] = ${-before}</code>.`,
+        });
+      } else {
+        snap({
+          kind: 'skip', lines: ['if'], readAt: j, target: box,
+          text: `<code>nums[${box}]</code> = ${nums[box]}, zaten negatif: ${abs} sayısını daha önce görmüştük, bu bir tekrar. Hiçbir şey yapmıyoruz.`,
+        });
+      }
+    }
+
+    // num and box only live inside the foreach.
+    num = undefined;
+    box = undefined;
+    phase = 'collect';
+    snap({
+      kind: 'list', lines: ['list'], changed: ['result'],
+      text: 'İşaretleme bitti. Negatif kutular dizide olan sayıların, pozitif kalanlar hiç görülmeyen sayıların kutuları. Boş bir <code>result</code> listesi oluşturup kutulara baştan sona bakıyoruz.',
+    });
+
+    for (i = 0; i < n; i++) {
+      if (nums[i] > 0) {
+        result.push(i + 1);
+        missing.push(i);
+        snap({
+          kind: 'add', lines: ['for', 'if2', 'add'], changed: ['i', 'result'], target: i,
+          text: `<code>i = ${i}</code>: <code>nums[${i}]</code> = ${nums[i]}, pozitif. Bu kutu hiç işaretlenmedi, yani ${i + 1} sayısı dizide yok. <code>result.Add(${i + 1})</code>.`,
+        });
+      } else {
+        const before = nums[i];
+        nums[i] = -before;
+        snap({
+          kind: 'restore', lines: ['for', 'if2', 'else', 'restore'], changed: ['i'], target: i,
+          text: `<code>i = ${i}</code>: <code>nums[${i}]</code> = ${before}, negatif. Yani ${i + 1} sayısı dizide var. İşareti geri alıyoruz: <code>nums[${i}] = ${-before}</code>.`,
+        });
+      }
+    }
+
+    snap({
+      kind: 'done', lines: ['for', 'ret'],
+      text: (result.length === 0
+        ? 'Döngü bitti ve hiçbir kutu pozitif kalmadı: kayıp sayı yok. <code>return result</code> → <code>[]</code>.'
+        : `Döngü bitti. <code>return result</code> → <code>[${result.join(', ')}]</code>. Bu sayılar dizide hiç yoktu.`) +
+        ` <code>nums</code> da işaretler geri alındığı için eski hâline döndü: <code>[${nums.join(', ')}]</code>.`,
+    });
+    return steps;
+  }
+
+  // Rendering
+  const CODE = [
+    ['foreach', '<span class="kw">foreach</span> (<span class="kw">int</span> num <span class="kw">in</span> nums)'],
+    ['', '{'],
+    ['box', '    <span class="kw">int</span> box = Math.Abs(num) - 1;'],
+    ['if', '    <span class="kw">if</span> (nums[box] &gt; 0)'],
+    ['neg', '        nums[box] = -nums[box];'],
+    ['', '}'],
+    ['', ''],
+    ['list', 'List&lt;<span class="kw">int</span>&gt; result = <span class="kw">new</span> List&lt;<span class="kw">int</span>&gt;();'],
+    ['for', '<span class="kw">for</span> (<span class="kw">int</span> i = 0; i &lt; nums.Length; i++)'],
+    ['', '{'],
+    ['if2', '    <span class="kw">if</span> (nums[i] &gt; 0)'],
+    ['add', '        result.Add(i + 1);'],
+    ['else', '    <span class="kw">else</span>'],
+    ['restore', '        nums[i] = -nums[i];'],
+    ['', '}'],
+    ['', ''],
+    ['ret', '<span class="kw">return</span> result;'],
+  ];
+  $('code').innerHTML = CODE.map(([id, html]) => `<span class="ln"${id ? ` data-id="${id}"` : ''}>${html || ' '}</span>`).join('');
+  const codeLines = {};
+  document.querySelectorAll('.ln[data-id]').forEach((el) => { codeLines[el.dataset.id] = el; });
+
+  const TAGS = {
+    start: ['Başlangıç', ''], read: ['Kutuyu bul', ''], mark: ['İşaretle', ''], skip: ['Tekrar', ''],
+    list: ['Topla', 'phase2'], add: ['Kayıp sayı', 'phase2'], restore: ['Geri al', 'phase2'], done: ['Bitti', 'ok'],
+  };
+
+  let listText = '4, 3, 2, 7, 8, 2, 3, 1';
+  let vals = [];
+  let steps = [];
+  let idx = 0;
+  let timer = null;
+
+  function parse(raw) {
+    const parts = raw.split(/[\s,]+/).filter(Boolean);
+    if (parts.length === 0 || parts.length > MAX_LEN) return null;
+    const out = parts.map(Number);
+    return out.every((v) => Number.isInteger(v) && v >= 1 && v <= out.length) ? out : null;
+  }
+
+  function render() {
+    const st = steps[idx];
+    const n = vals.length;
+
+    let html = '';
+    for (let k = 0; k < n; k++) {
+      const state = st.missing.includes(k) ? 'missing' : st.nums[k] < 0 ? 'marked' : 'plain';
+      const cls = 'box' + (k === st.readAt ? ' reading' : '') + (k === st.target ? ' target' : '');
+      const t = [];
+      if (k === st.readAt) t.push('<span class="t-num">num</span>');
+      if (k === st.target) t.push(`<span class="t-box">${st.phase === 'mark' ? 'box' : 'i'}</span>`);
+      html += `<div class="cell"><div class="tags">${t.join('')}</div>` +
+        `<div class="${cls}" data-state="${state}">${st.nums[k]}</div>` +
+        `<div class="idx">[${k}]</div><div class="owner">sayı <b>${k + 1}</b></div></div>`;
+    }
+    $('arr').innerHTML = html;
+
+    const vars = [['num', st.num], ['box', st.box], ['i', st.i]];
+    $('vars').innerHTML = vars.map(([name, v]) =>
+      `<div class="var${st.changed.includes(name) ? ' changed' : ''}"><dt>${name}</dt><dd>${v === undefined ? '—' : v}</dd></div>`).join('');
+
+    $('result').textContent = st.phase === 'mark' ? '—' : `[${st.result.join(', ')}]`;
+    $('out').classList.toggle('changed', st.changed.includes('result'));
+
+    Object.keys(codeLines).forEach((id) => codeLines[id].classList.toggle('hl', st.lines.includes(id)));
+
+    const [tagText, tagKind] = TAGS[st.kind];
+    $('step-count').textContent = `Adım ${idx + 1} / ${steps.length}`;
+    $('step-tag').textContent = tagText;
+    $('step-tag').dataset.kind = tagKind;
+    $('step-text').innerHTML = st.text;
+    $('prev-btn').disabled = idx === 0;
+    $('reset').disabled = idx === 0;
+    $('next-btn').disabled = idx === steps.length - 1;
+
+    document.querySelectorAll('.presets button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.l === listText)));
+  }
+
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    $('play').textContent = '▶ Oynat';
+  }
+
+  function restart(text, parsed) {
+    stop();
+    listText = text;
+    vals = parsed;
+    steps = buildSteps(vals);
+    idx = 0;
+    render();
+  }
+
+  $('next-btn').addEventListener('click', () => { stop(); if (idx < steps.length - 1) { idx++; render(); } });
+  $('prev-btn').addEventListener('click', () => { stop(); if (idx > 0) { idx--; render(); } });
+  $('reset').addEventListener('click', () => { stop(); idx = 0; render(); });
+  $('play').addEventListener('click', () => {
+    if (timer) { stop(); return; }
+    if (idx === steps.length - 1) { idx = 0; render(); }
+    $('play').textContent = '❚❚ Durdur';
+    timer = setInterval(() => {
+      if (idx < steps.length - 1) { idx++; render(); }
+      if (idx === steps.length - 1) stop();
+    }, 1100);
+  });
+  document.querySelectorAll('.presets button').forEach((b) => b.addEventListener('click', () => {
+    $('list').value = b.dataset.l;
+    $('list-err').hidden = true;
+    restart(b.dataset.l, parse(b.dataset.l));
+  }));
+  $('list').addEventListener('input', (e) => {
+    const parsed = parse(e.target.value);
+    if (!parsed) { $('list-err').hidden = false; return; }
+    $('list-err').hidden = true;
+    restart(e.target.value, parsed);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next-btn').click();
+    else if (e.key === 'ArrowLeft') $('prev-btn').click();
+  });
+
+  restart(listText, parse(listText));
+})();
+</script>
+</body>
+</html>

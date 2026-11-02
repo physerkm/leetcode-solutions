@@ -23,6 +23,16 @@ public class SolutionTests
     }
 
     [Fact]
+    public void FindDisappearedNumbers_LeavesInputUnchanged()
+    {
+        int[] nums = { 4, 3, 2, 7, 8, 2, 3, 1 };
+
+        new Solution().FindDisappearedNumbers(nums);
+
+        Assert.Equal(new[] { 4, 3, 2, 7, 8, 2, 3, 1 }, nums);
+    }
+
+    [Fact]
     public void FindDisappearedNumbers_HandlesTheLongestAllowedArray()
     {
         // 1..50000 each appear twice, so 50001..100000 are missing.
