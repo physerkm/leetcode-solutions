@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bağlı Listeyi Ters Çevirmek</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: one reading column; the stepper is a single tool panel (controls, step card, chain, then variables | code) that stacks on phones. */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --ink: #141b26;
+  --muted: #5a6779;
+  --line: #d6dce6;
+  --accent: #3346c8;
+  --accent-ink: #ffffff;
+  --range: #e3e9fb;
+  --range-ink: #1d2a6b;
+  --good: #17824a;
+  --good-soft: #dcf1e4;
+  --good-soft-ink: #145c36;
+  --bad: #b8402a;
+  --code-bg: #f7f8fb;
+  --code-hl: #dfe5fb;
+  --kw: #7a3aa8;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+    --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+    --good: #3fbf7a; --good-soft: #14301f; --good-soft-ink: #8fe0b2; --bad: #ff7d66;
+    --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+  --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+  --good: #3fbf7a; --good-soft: #14301f; --good-soft-ink: #8fe0b2; --bad: #ff7d66;
+  --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0;
+  color-scheme: dark;
+}
+
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
+.wrap {
+  max-width: 1040px; margin: 0 auto;
+  padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px;
+}
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--muted); margin: 0; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 6vw, 54px); line-height: 1.05; letter-spacing: -.02em; margin: 8px 0 14px; text-wrap: balance; }
+.lead { max-width: 62ch; color: var(--muted); margin: 0; font-size: 17px; }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -.01em; margin: 0 0 18px; text-wrap: balance; }
+code { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+
+/* Idea */
+.idea { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; list-style: none; padding: 0; margin: 0; }
+.idea li { border-top: 2px solid var(--ink); padding-top: 12px; min-width: 0; }
+.idea .n { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.idea h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 2px 0 6px; text-wrap: balance; }
+.idea p { margin: 0; color: var(--muted); font-size: 15px; }
+@media (max-width: 760px) { .idea { grid-template-columns: 1fr; gap: 20px; } }
+
+/* Stepper panel */
+.stepper { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+@media (max-width: 560px) { .stepper { padding: 16px; } }
+.stepper h2 { margin: 0; }
+.controls { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+.field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+input[type="text"] { width: 14em; max-width: 100%; font: 600 18px var(--font-mono); padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.err { margin: 0; font-size: 13px; color: var(--bad); }
+button { font: 500 14px var(--font-body); padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .4; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.presets button { font-size: 13px; padding: 7px 10px; }
+.presets .mono { font-family: var(--font-mono); font-weight: 700; margin-right: 4px; }
+.presets button[aria-pressed="true"] { border-color: var(--accent); background: var(--range); color: var(--range-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav { display: flex; flex-wrap: wrap; gap: 8px; }
+#play { min-width: 7.5em; }
+
+.step { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+.step-meta { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag { font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--range); color: var(--range-ink); }
+.tag[data-kind="ok"] { background: var(--good); color: var(--surface); }
+#step-text { margin: 8px 0 0; font-size: 16.5px; max-width: 78ch; min-height: 3.2em; }
+
+.panel-label { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 8px; }
+
+/* Chain */
+.chain-scroll { overflow-x: auto; padding: 4px 2px 6px; }
+.chain { display: flex; align-items: flex-start; width: max-content; }
+.slot { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 56px; }
+.box { width: 52px; height: 48px; border-radius: 10px; display: grid; place-items: center; font: 700 19px var(--font-mono); border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.box.null { font: 500 13px var(--font-mono); color: var(--muted); border-style: dashed; background: transparent; }
+.box[data-state="done"] { background: var(--good-soft); color: var(--good-soft-ink); border-color: transparent; }
+.box.cur { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.seg { width: 40px; height: 48px; display: grid; place-items: center; font: 700 22px var(--font-mono); color: var(--ink); }
+.seg[data-dir="none"] { color: transparent; }
+.seg.fresh { color: var(--accent); }
+.seg.cut { color: var(--bad); font-size: 18px; }
+.tags { display: flex; flex-direction: column; align-items: center; min-height: 64px; font: 600 11px/1.35 var(--font-mono); }
+.t-current { color: var(--accent); }
+.t-prev, .t-next { color: var(--ink); }
+.t-head { color: var(--muted); font-weight: 400; font-style: italic; }
+.t-newhead { color: var(--good); }
+.box, .seg { transition: background-color .2s, color .2s, border-color .2s; }
+@media (prefers-reduced-motion: reduce) { .box, .seg { transition: none; } }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; border: 1px solid var(--line); }
+.sw.todo { background: var(--surface); }
+.sw.cur { background: var(--accent); border-color: var(--accent); }
+.sw.done { background: var(--good-soft); }
+.legend .cutmark { color: var(--bad); font-weight: 700; margin-right: 4px; }
+
+/* Variables + code */
+.board { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 28px; }
+@media (max-width: 880px) { .board { grid-template-columns: 1fr; } }
+.col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.vars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.var { border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; background: var(--bg); }
+.var dt { font: 400 12px var(--font-mono); color: var(--muted); }
+.var dd { margin: 0; font: 600 18px var(--font-mono); font-variant-numeric: tabular-nums; }
+.var.changed { border-color: var(--accent); background: var(--range); }
+.var.changed dd { color: var(--range-ink); }
+.reads { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.read { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--bg); }
+.read span { display: block; font-size: 12px; color: var(--muted); }
+.read b { font: 600 15px var(--font-mono); overflow-wrap: anywhere; }
+.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 0; overflow-x: auto; font: 13px/1.6 var(--font-mono); }
+@media (max-width: 560px) { .code { font-size: 12px; } }
+.ln { display: block; padding: 0 14px 0 11px; white-space: pre; border-left: 3px solid transparent; }
+.ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
+.kw { color: var(--kw); }
+
+.why p { margin: 0; max-width: 66ch; color: var(--muted); }
+.why b { color: var(--ink); }
+.foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+.foot a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">LeetCode 206 · Reverse Linked List · Easy</p>
+    <h1>Bağlı Listeyi Ters Çevirmek</h1>
+    <p class="lead">Çözümün her adımını burada izleyebilirsin. Bir liste seç, <b>İleri</b>'ye bas ya da <b>Oynat</b>'a tıkla; okların tek tek nasıl çevrildiğini ve <code>prev</code>, <code>current</code>, <code>next</code> değişkenlerinin nasıl ilerlediğini gör.</p>
+  </header>
+
+  <section aria-labelledby="idea-h">
+    <h2 id="idea-h">Fikir üç adımda</h2>
+    <ol class="idea">
+      <li>
+        <span class="n">1</span>
+        <h3>Bağlı liste bir zincir</h3>
+        <p>Her node bir sayı (<code>val</code>) ve bir sonraki node'u gösteren bir ok (<code>next</code>) tutar. Elinde sadece ilk node (<code>head</code>) vardır. Son node'un oku <code>null</code>'ı gösterir.</p>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <h3>Okları tek tek geriye çevir</h3>
+        <p>Listeyi baştan sona gez ve her node'un okunu bir öncekine çevir. İlk node'un oku <code>null</code>'a döner, çünkü ters çevrilince o son node olur.</p>
+      </li>
+      <li>
+        <span class="n">3</span>
+        <h3>Oku çevirmeden önce yolu sakla</h3>
+        <p><code>current.next</code>'i değiştirdiğin anda listenin geri kalanına giden yol kopar. Bu yüzden önce <code>next = current.next</code> ile bir sonraki node'u saklarsın.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="stepper" aria-labelledby="st-h">
+    <h2 id="st-h">Adım adım izle</h2>
+
+    <div class="controls">
+      <div class="row">
+        <div class="field">
+          <label for="list">Liste (virgülle ayır, en fazla 7 sayı)</label>
+          <input id="list" type="text" value="1, 2, 3, 4, 5" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="nav">
+          <button type="button" id="reset">Baştan</button>
+          <button type="button" id="prev-btn">← Geri</button>
+          <button type="button" id="next-btn" class="primary">İleri →</button>
+          <button type="button" id="play">▶ Oynat</button>
+        </div>
+      </div>
+      <div class="presets" role="group" aria-label="Hazır örnekler">
+        <button type="button" data-l="1, 2, 3, 4, 5"><span class="mono">[1,2,3,4,5]</span></button>
+        <button type="button" data-l="1, 2"><span class="mono">[1,2]</span></button>
+        <button type="button" data-l="7"><span class="mono">[7]</span>tek node</button>
+        <button type="button" data-l=""><span class="mono">[]</span>boş liste</button>
+      </div>
+      <p class="err" id="list-err" hidden>Virgülle ayrılmış en fazla 7 tam sayı yaz (örneğin 1, 2, 3). Sayılar -5000 ile 5000 arasında olmalı. Boş bırakırsan liste boş olur.</p>
+    </div>
+
+    <div class="step" aria-live="polite">
+      <div class="step-meta"><span id="step-count"></span><span id="step-tag" class="tag"></span></div>
+      <p id="step-text"></p>
+    </div>
+
+    <div>
+      <p class="panel-label">Liste (node'lar yerinde duruyor, sadece oklar değişiyor)</p>
+      <div class="chain-scroll"><div class="chain" id="chain"></div></div>
+      <div class="legend">
+        <span><i class="sw todo"></i>henüz çevrilmedi</span>
+        <span><i class="sw cur"></i>current</span>
+        <span><i class="sw done"></i>oku çevrildi</span>
+        <span><span class="cutmark">✂</span>bu adımda kopan bağ</span>
+      </div>
+    </div>
+
+    <div class="board">
+      <div class="col">
+        <p class="panel-label">Değişkenler</p>
+        <dl class="vars" id="vars"></dl>
+        <div class="reads">
+          <div class="read"><span>prev'den başlayıp okları takip edince (ters çevrilmiş kısım)</span><b id="read-prev"></b></div>
+          <div class="read"><span>current'tan başlayıp okları takip edince (kalan kısım)</span><b id="read-cur"></b></div>
+        </div>
+      </div>
+      <div class="col">
+        <p class="panel-label">Kod (Solution.cs içindeki metot)</p>
+        <div class="code" id="code" role="region" aria-label="C# kodu" tabindex="0"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-h">
+    <h2 id="why-h">Neden O(1) bellek?</h2>
+    <p>Her node'a bir kez uğruyoruz: <b>O(n) zaman</b>. Liste 5 node da olsa 5000 node da olsa sadece üç değişken kullanıyoruz (<code>prev</code>, <code>current</code>, <code>next</code>) ve hiç yeni node oluşturmuyoruz: <b>O(1) bellek</b>.</p>
+  </section>
+
+  <footer class="foot">
+    <a href="https://leetcode.com/problems/reverse-linked-list/">Soru: LeetCode 206</a>
+    <a href="https://github.com/physerkm/leetcode-solutions/blob/main/src/LeetCode/Problems/P0206_ReverseLinkedList/Solution.cs">Kod: Solution.cs</a>
+    <a href="../">Tüm anlatımlar</a>
+    <a href="https://github.com/physerkm/leetcode-solutions">Repo: physerkm/leetcode-solutions</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  // Steps: mirrors Solution.cs line by line.
+  // Node positions never move; -1 stands for null, undefined for "not declared yet".
+  function buildSteps(vals) {
+    const n = vals.length;
+    const steps = [];
+    const reversed = Array(n).fill(false);
+    let prev = -1;
+    let current = n > 0 ? 0 : -1;
+    let next;
+    const name = (k) => (k === -1 ? '<code>null</code>' : `<code>[${vals[k]}]</code>`);
+    const snap = (step) => steps.push({ reversed: reversed.slice(), prev, current, next, cut: -1, fresh: -1, ...step });
+
+    snap({
+      kind: 'init', lines: ['prev', 'current'], changed: ['prev', 'current'],
+      text: n === 0
+        ? 'Liste boş, yani <code>head</code> zaten <code>null</code>. <code>prev = null</code>, <code>current = head</code> → <code>null</code>.'
+        : `<code>prev = null</code>, <code>current = head</code>. <code>current</code> listenin başındaki ${name(0)} node'unu gösteriyor. <code>prev</code> null, çünkü ilk node ters çevrilince son node olacak ve null'ı gösterecek.`,
+    });
+
+    while (current !== -1) {
+      const i = current;
+
+      next = i + 1 < n ? i + 1 : -1;
+      snap({
+        kind: 'save', lines: ['while', 'save'], changed: ['next'],
+        text: `Önce listenin geri kalanını kaybetmemek için bir sonraki node'u saklıyoruz: <code>next = current.next</code> → ${name(next)}.`,
+      });
+
+      reversed[i] = true;
+      snap({
+        kind: 'turn', lines: ['turn'], changed: [], fresh: i, cut: i + 1,
+        text: `${name(i)} node'unun okunu geriye çeviriyoruz: <code>current.next = prev</code>. Ok artık geriye bakıyor: ${name(prev)} ← ${name(i)}.` +
+          (next === -1 ? '' : ` ${name(i)} ile ${name(next)} arasındaki bağ koptu; ${name(next)} node'una artık sadece <code>next</code> sayesinde ulaşabiliyoruz.`),
+      });
+
+      prev = i;
+      snap({
+        kind: 'movePrev', lines: ['movePrev'], changed: ['prev'],
+        text: `<code>prev</code> bir adım ilerliyor: <code>prev = current</code> → ${name(prev)}.`,
+      });
+
+      current = next;
+      snap({
+        kind: 'moveCur', lines: ['moveCur'], changed: ['current'],
+        text: current === -1
+          ? '<code>current</code> bir adım ilerliyor: <code>current = next</code> → <code>null</code>. Listenin sonuna geldik.'
+          : `<code>current</code> bir adım ilerliyor: <code>current = next</code> → ${name(current)}. Sıradaki tur bu node için.`,
+      });
+    }
+
+    snap({
+      kind: 'done', lines: ['while', 'ret'], changed: [],
+      text: n === 0
+        ? '<code>current</code> baştan <code>null</code> olduğu için döngü hiç çalışmadı. <code>return prev</code> → <code>null</code>. Boş listenin tersi yine boş liste.'
+        : `<code>current == null</code> olduğu için döngü bitti. <code>return prev</code> → ${name(prev)}. Yeni head bu; liste artık <code>${vals.slice().reverse().join(' → ')} → null</code>. <code>head</code> hâlâ ${name(0)} node'unu gösteriyor ama o artık son node; bu yüzden <code>return head</code> yazmak yanlış olurdu.`,
+    });
+    return steps;
+  }
+
+  // Follows the arrows from node k and lists the values it reaches.
+  function readFrom(k, reversed, vals) {
+    const out = [];
+    while (k !== -1) {
+      out.push(vals[k]);
+      k = reversed[k] ? k - 1 : (k + 1 < vals.length ? k + 1 : -1);
+    }
+    out.push('null');
+    return out.join(' → ');
+  }
+
+  // Rendering
+  const CODE = [
+    ['prev', 'ListNode prev = <span class="kw">null</span>;'],
+    ['current', 'ListNode current = head;'],
+    ['', ''],
+    ['while', '<span class="kw">while</span> (current != <span class="kw">null</span>)'],
+    ['', '{'],
+    ['save', '    ListNode next = current.next;'],
+    ['turn', '    current.next = prev;'],
+    ['movePrev', '    prev = current;'],
+    ['moveCur', '    current = next;'],
+    ['', '}'],
+    ['', ''],
+    ['ret', '<span class="kw">return</span> prev;'],
+  ];
+  $('code').innerHTML = CODE.map(([id, html]) => `<span class="ln"${id ? ` data-id="${id}"` : ''}>${html || ' '}</span>`).join('');
+  const codeLines = {};
+  document.querySelectorAll('.ln[data-id]').forEach((el) => { codeLines[el.dataset.id] = el; });
+
+  const TAGS = {
+    init: ['Başlangıç', ''], save: ['next\'i sakla', ''], turn: ['Oku çevir', ''],
+    movePrev: ['prev ilerler', ''], moveCur: ['current ilerler', ''], done: ['Bitti', 'ok'],
+  };
+
+  let listText = '1, 2, 3, 4, 5';
+  let vals = [];
+  let steps = [];
+  let idx = 0;
+  let timer = null;
+
+  function parse(raw) {
+    const parts = raw.split(/[\s,]+/).filter(Boolean);
+    if (parts.length > 7) return null;
+    const out = parts.map(Number);
+    return out.every((v) => Number.isInteger(v) && v >= -5000 && v <= 5000) ? out : null;
+  }
+
+  function seg(dir, extra) {
+    const glyph = extra === 'cut' ? '✂' : dir === 'fwd' ? '→' : dir === 'back' ? '←' : '·';
+    return `<div class="seg${extra ? ' ' + extra : ''}" data-dir="${extra === 'cut' ? 'cut' : dir}" aria-hidden="true">${glyph}</div>`;
+  }
+
+  function tagsFor(pos, st) {
+    // pos: 'L' (left null), 'R' (right null) or a node index.
+    if (vals.length === 0) {
+      return '<span class="t-current">current</span><span class="t-prev">prev</span><span class="t-head">head</span>';
+    }
+    const prevPos = st.prev === -1 ? 'L' : st.prev;
+    const curPos = st.current === -1 ? 'R' : st.current;
+    const nextPos = st.next === undefined ? undefined : st.next === -1 ? 'R' : st.next;
+    const t = [];
+    if (pos === curPos) t.push('<span class="t-current">current</span>');
+    if (pos === prevPos) t.push('<span class="t-prev">prev</span>');
+    if (nextPos !== undefined && pos === nextPos) t.push('<span class="t-next">next</span>');
+    if (pos === 0) t.push('<span class="t-head">head</span>');
+    if (st.kind === 'done' && pos === st.prev) t.push('<span class="t-newhead">yeni head</span>');
+    return t.join('');
+  }
+
+  function render() {
+    const st = steps[idx];
+    const n = vals.length;
+    let html = '';
+
+    if (n === 0) {
+      html = `<div class="slot"><div class="box null">null</div><div class="tags">${tagsFor('L', st)}</div></div>`;
+    } else {
+      html += `<div class="slot"><div class="box null">null</div><div class="tags">${tagsFor('L', st)}</div></div>`;
+      for (let k = 0; k <= n; k++) {
+        // Segment k sits between node k-1 (or the left null) and node k (or the right null).
+        let dir;
+        if (k === 0) dir = st.reversed[0] ? 'back' : 'none';
+        else if (k === n) dir = st.reversed[n - 1] ? 'none' : 'fwd';
+        else dir = !st.reversed[k - 1] ? 'fwd' : st.reversed[k] ? 'back' : 'none';
+        const extra = k === st.fresh ? 'fresh' : k === st.cut ? 'cut' : '';
+        html += seg(dir, extra);
+        if (k < n) {
+          const cls = 'box' + (k === st.current ? ' cur' : '');
+          html += `<div class="slot"><div class="${cls}" data-state="${st.reversed[k] ? 'done' : 'todo'}">${vals[k]}</div><div class="tags">${tagsFor(k, st)}</div></div>`;
+        }
+      }
+      html += `<div class="slot"><div class="box null">null</div><div class="tags">${tagsFor('R', st)}</div></div>`;
+    }
+    $('chain').innerHTML = html;
+
+    const show = (k) => (k === undefined ? '—' : k === -1 ? 'null' : `[${vals[k]}]`);
+    const vars = [['prev', st.prev], ['current', st.current], ['next', st.next]];
+    $('vars').innerHTML = vars.map(([name, k]) =>
+      `<div class="var${st.changed.includes(name) ? ' changed' : ''}"><dt>${name}</dt><dd>${show(k)}</dd></div>`).join('');
+
+    $('read-prev').textContent = readFrom(st.prev, st.reversed, vals);
+    $('read-cur').textContent = readFrom(st.current, st.reversed, vals);
+
+    Object.keys(codeLines).forEach((id) => codeLines[id].classList.toggle('hl', st.lines.includes(id)));
+
+    const [tagText, tagKind] = TAGS[st.kind];
+    $('step-count').textContent = `Adım ${idx + 1} / ${steps.length}`;
+    $('step-tag').textContent = tagText;
+    $('step-tag').dataset.kind = tagKind;
+    $('step-text').innerHTML = st.text;
+    $('prev-btn').disabled = idx === 0;
+    $('reset').disabled = idx === 0;
+    $('next-btn').disabled = idx === steps.length - 1;
+
+    document.querySelectorAll('.presets button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.l === listText)));
+  }
+
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    $('play').textContent = '▶ Oynat';
+  }
+
+  function restart(text, parsed) {
+    stop();
+    listText = text;
+    vals = parsed;
+    steps = buildSteps(vals);
+    idx = 0;
+    render();
+  }
+
+  $('next-btn').addEventListener('click', () => { stop(); if (idx < steps.length - 1) { idx++; render(); } });
+  $('prev-btn').addEventListener('click', () => { stop(); if (idx > 0) { idx--; render(); } });
+  $('reset').addEventListener('click', () => { stop(); idx = 0; render(); });
+  $('play').addEventListener('click', () => {
+    if (timer) { stop(); return; }
+    if (idx === steps.length - 1) { idx = 0; render(); }
+    $('play').textContent = '❚❚ Durdur';
+    timer = setInterval(() => {
+      if (idx < steps.length - 1) { idx++; render(); }
+      if (idx === steps.length - 1) stop();
+    }, 1100);
+  });
+  document.querySelectorAll('.presets button').forEach((b) => b.addEventListener('click', () => {
+    $('list').value = b.dataset.l;
+    $('list-err').hidden = true;
+    restart(b.dataset.l, parse(b.dataset.l));
+  }));
+  $('list').addEventListener('input', (e) => {
+    const parsed = parse(e.target.value);
+    if (!parsed) { $('list-err').hidden = false; return; }
+    $('list-err').hidden = true;
+    restart(e.target.value, parsed);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next-btn').click();
+    else if (e.key === 'ArrowLeft') $('prev-btn').click();
+  });
+
+  restart(listText, parse(listText));
+})();
+</script>
+</body>
+</html>
