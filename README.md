@@ -7,6 +7,7 @@ LeetCode'da çözdüğüm soruların C# çözümleri.
 | # | Soru | Zorluk | Çözüm |
 |---|------|--------|-------|
 | 20 | [Valid Parentheses](https://leetcode.com/problems/valid-parentheses/) | Easy | [C#](src/LeetCode/Problems/P0020_ValidParentheses/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0020_ValidParentheses/) |
+| 70 | [Climbing Stairs](https://leetcode.com/problems/climbing-stairs/) | Easy | [C#](src/LeetCode/Problems/P0070_ClimbingStairs/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0070_ClimbingStairs/) |
 | 74 | [Search a 2D Matrix](https://leetcode.com/problems/search-a-2d-matrix/) | Medium | [C#](src/LeetCode/Problems/P0074_SearchA2DMatrix/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0074_SearchA2DMatrix/) |
 | 206 | [Reverse Linked List](https://leetcode.com/problems/reverse-linked-list/) | Easy | [C#](src/LeetCode/Problems/P0206_ReverseLinkedList/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0206_ReverseLinkedList/) |
 

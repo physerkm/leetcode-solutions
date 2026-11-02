@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Merdiven Çıkmanın Yolları</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: one reading column; the stepper is a single tool panel (controls, step card, staircase, then variables + paths | code) that stacks on phones. */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --ink: #141b26;
+  --muted: #5a6779;
+  --line: #d6dce6;
+  --accent: #3346c8;
+  --accent-ink: #ffffff;
+  --range: #e3e9fb;
+  --range-ink: #1d2a6b;
+  --good: #17824a;
+  --good-soft: #dcf1e4;
+  --good-soft-ink: #145c36;
+  --bad: #b8402a;
+  --code-bg: #f7f8fb;
+  --code-hl: #dfe5fb;
+  --kw: #7a3aa8;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+    --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+    --good: #3fbf7a; --good-soft: #14301f; --good-soft-ink: #8fe0b2; --bad: #ff7d66;
+    --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+  --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+  --good: #3fbf7a; --good-soft: #14301f; --good-soft-ink: #8fe0b2; --bad: #ff7d66;
+  --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0;
+  color-scheme: dark;
+}
+
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
+.wrap {
+  max-width: 1040px; margin: 0 auto;
+  padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px;
+}
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--muted); margin: 0; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 6vw, 54px); line-height: 1.05; letter-spacing: -.02em; margin: 8px 0 14px; text-wrap: balance; }
+.lead { max-width: 62ch; color: var(--muted); margin: 0; font-size: 17px; }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -.01em; margin: 0 0 18px; text-wrap: balance; }
+code { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+
+/* Idea */
+.idea { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; list-style: none; padding: 0; margin: 0; }
+.idea li { border-top: 2px solid var(--ink); padding-top: 12px; min-width: 0; }
+.idea .n { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.idea h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 2px 0 6px; text-wrap: balance; }
+.idea p { margin: 0; color: var(--muted); font-size: 15px; }
+@media (max-width: 760px) { .idea { grid-template-columns: 1fr; gap: 20px; } }
+
+/* Stepper panel */
+.stepper { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+@media (max-width: 560px) { .stepper { padding: 16px; } }
+.stepper h2 { margin: 0; }
+.controls { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+.field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+input[type="text"] { width: 5em; max-width: 100%; font: 600 18px var(--font-mono); padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.err { margin: 0; font-size: 13px; color: var(--bad); }
+button { font: 500 14px var(--font-body); padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .4; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.presets button { font-size: 13px; padding: 7px 10px; }
+.presets .mono { font-family: var(--font-mono); font-weight: 700; margin-right: 4px; }
+.presets button[aria-pressed="true"] { border-color: var(--accent); background: var(--range); color: var(--range-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav { display: flex; flex-wrap: wrap; gap: 8px; }
+#play { min-width: 7.5em; }
+
+.step { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+.step-meta { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag { font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--range); color: var(--range-ink); }
+.tag[data-kind="ok"] { background: var(--good); color: var(--surface); }
+#step-text { margin: 8px 0 0; font-size: 16.5px; max-width: 78ch; min-height: 3.2em; }
+
+.panel-label { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 8px; }
+
+/* Staircase: one column per stair, taller as it goes up; the tops form the steps. */
+.stairs-scroll { overflow-x: auto; padding: 4px 2px 6px; }
+.stairs { display: flex; align-items: flex-end; width: max-content; }
+.stair { display: flex; flex-direction: column; align-items: center; width: 62px; }
+.tags { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-height: 38px; padding-bottom: 4px; font: 600 11px/1.35 var(--font-mono); }
+.t-step { color: var(--accent); }
+.t-var { color: var(--ink); }
+.t-move { color: var(--muted); font-weight: 400; font-style: italic; }
+.t-answer { color: var(--good); }
+.block {
+  width: calc(100% - 4px); box-sizing: border-box;
+  border: 1px solid var(--line); border-bottom: none; border-radius: 6px 6px 0 0;
+  background: var(--surface); color: var(--ink);
+  display: flex; justify-content: center; padding-top: 6px;
+  font: 700 18px var(--font-mono); font-variant-numeric: tabular-nums;
+}
+.block[data-state="todo"] { color: var(--muted); font-weight: 500; border-style: dashed; border-bottom: none; }
+.block[data-state="done"] { background: var(--good-soft); color: var(--good-soft-ink); border-color: transparent; }
+.block[data-state="ref"] { background: var(--range); color: var(--range-ink); border-color: var(--accent); }
+.block[data-state="cur"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.block[data-state="answer"] { background: var(--good); color: var(--surface); border-color: var(--good); }
+.block { transition: background-color .2s, color .2s, border-color .2s; }
+@media (prefers-reduced-motion: reduce) { .block { transition: none; } }
+/* Fixed height so the floor line stays level even under the "tepe" label. */
+.num { align-self: stretch; height: 36px; box-sizing: border-box; border-top: 2px solid var(--ink); padding-top: 4px; text-align: center; font: 500 12px/1.3 var(--font-mono); color: var(--muted); }
+.num small { display: block; font: 600 11px var(--font-body); color: var(--ink); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; border: 1px solid var(--line); }
+.sw.todo { background: var(--surface); border-style: dashed; }
+.sw.cur { background: var(--accent); border-color: var(--accent); }
+.sw.ref { background: var(--range); border-color: var(--accent); }
+.sw.done { background: var(--good-soft); }
+
+/* Variables + paths | code */
+.board { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 28px; }
+@media (max-width: 880px) { .board { grid-template-columns: 1fr; } }
+.col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.vars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.var { border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; background: var(--bg); min-width: 0; }
+.var dt { font: 400 12px var(--font-mono); color: var(--muted); }
+.var dd { margin: 0; font: 600 18px var(--font-mono); font-variant-numeric: tabular-nums; }
+.var.changed { border-color: var(--accent); background: var(--range); }
+.var.changed dd { color: var(--range-ink); }
+.paths { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; background: var(--bg); display: flex; flex-direction: column; gap: 10px; }
+.paths-head { margin: 0; font-size: 14px; font-weight: 600; }
+.paths-head b { font-family: var(--font-mono); }
+.paths-empty { margin: 0; font-size: 14px; color: var(--muted); }
+.paths-empty b { color: var(--accent); font-family: var(--font-mono); }
+.group .lbl { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.path { font: 500 13px var(--font-mono); padding: 2px 7px; border-radius: 6px; background: var(--surface); border: 1px solid var(--line); }
+.path b { color: var(--accent); }
+.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 0; overflow-x: auto; font: 13px/1.6 var(--font-mono); }
+@media (max-width: 560px) { .code { font-size: 12px; } }
+.ln { display: block; padding: 0 14px 0 11px; white-space: pre; border-left: 3px solid transparent; }
+.ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
+.kw { color: var(--kw); }
+
+.why p { margin: 0 0 10px; max-width: 66ch; color: var(--muted); }
+.why p:last-child { margin-bottom: 0; }
+.why b { color: var(--ink); }
+.foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+.foot a { color: var(--accent); }
+
+/* No ligatures: `<=` should look the way it is typed, not like `≤`.
+   Kept last because the `font` shorthand above would reset it. */
+code, .code, .path, .var dd, .block, input[type="text"] { font-variant-ligatures: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">LeetCode 70 · Climbing Stairs · Easy</p>
+    <h1>Merdiven Çıkmanın Yolları</h1>
+    <p class="lead">Çözümün her adımını burada izleyebilirsin. Bir <code>n</code> seç, <b>İleri</b>'ye bas ya da <b>Oynat</b>'a tıkla; her basamağın yol sayısının alttaki iki basamaktan nasıl hesaplandığını gör.</p>
+  </header>
+
+  <section aria-labelledby="idea-h">
+    <h2 id="idea-h">Fikir üç adımda</h2>
+    <ol class="idea">
+      <li>
+        <span class="n">1</span>
+        <h3>Son hamleye bak</h3>
+        <p>Bir basamağa çıkmadan hemen önce ya bir alttaki basamaktaydın ve 1 adım attın, ya da iki alttakindeydin ve 2 adım attın. Başka yolu yok.</p>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <h3>Alttaki iki sayıyı topla</h3>
+        <p>Bu yüzden bir basamağa çıkan yol sayısı, bir alttakinin ve iki alttakinin yol sayılarının toplamıdır: 1, 2, 3, 5, 8, 13…</p>
+      </li>
+      <li>
+        <span class="n">3</span>
+        <h3>Sadece son ikisini tut</h3>
+        <p>Aşağıdan yukarıya tek bir döngüyle çık. Her turda sadece son iki sonuca ihtiyacın var, o yüzden iki değişken (<code>twoBelow</code>, <code>oneBelow</code>) yeter.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="stepper" aria-labelledby="st-h">
+    <h2 id="st-h">Adım adım izle</h2>
+
+    <div class="controls">
+      <div class="row">
+        <div class="field">
+          <label for="n">Basamak sayısı n (1–12)</label>
+          <input id="n" type="text" inputmode="numeric" value="5" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="nav">
+          <button type="button" id="reset">Baştan</button>
+          <button type="button" id="prev-btn">← Geri</button>
+          <button type="button" id="next-btn" class="primary">İleri →</button>
+          <button type="button" id="play">▶ Oynat</button>
+        </div>
+      </div>
+      <div class="presets" role="group" aria-label="Hazır örnekler">
+        <button type="button" data-n="5"><span class="mono">n = 5</span></button>
+        <button type="button" data-n="8"><span class="mono">n = 8</span></button>
+        <button type="button" data-n="2"><span class="mono">n = 2</span>döngüye girmez</button>
+        <button type="button" data-n="1"><span class="mono">n = 1</span>döngüye girmez</button>
+      </div>
+      <p class="err" id="n-err" hidden>1 ile 12 arasında bir tam sayı yaz. LeetCode 45'e kadar izin veriyor ama merdiven ekrana sığsın diye burada 12 ile sınırlı.</p>
+    </div>
+
+    <div class="step" aria-live="polite">
+      <div class="step-meta"><span id="step-count"></span><span id="step-tag" class="tag"></span></div>
+      <p id="step-text"></p>
+    </div>
+
+    <div>
+      <p class="panel-label">Merdiven (her basamağın üstündeki sayı, oraya kaç farklı yoldan çıkıldığını gösteriyor)</p>
+      <div class="stairs-scroll"><div class="stairs" id="stairs"></div></div>
+      <div class="legend">
+        <span><i class="sw todo"></i>henüz hesaplanmadı</span>
+        <span><i class="sw cur"></i>şu an hesaplanan</span>
+        <span><i class="sw ref"></i>twoBelow / oneBelow'un tuttuğu</span>
+        <span><i class="sw done"></i>hesaplandı</span>
+      </div>
+    </div>
+
+    <div class="board">
+      <div class="col">
+        <p class="panel-label">Değişkenler</p>
+        <dl class="vars" id="vars"></dl>
+        <div class="paths" id="paths"></div>
+      </div>
+      <div class="col">
+        <p class="panel-label">Kod (Solution.cs içindeki metot)</p>
+        <div class="code" id="code" role="region" aria-label="C# kodu" tabindex="0"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-h">
+    <h2 id="why-h">Neden O(n) zaman, O(1) bellek?</h2>
+    <p>Her basamağı bir kez hesaplıyoruz: <b>O(n) zaman</b>. Merdiven 5 basamak da olsa 45 basamak da olsa sadece üç sayı tutuyoruz (<code>twoBelow</code>, <code>oneBelow</code>, <code>ways</code>): <b>O(1) bellek</b>.</p>
+    <p>Aynı formülü kendini çağıran bir metotla (<code>ClimbStairs(n - 1) + ClimbStairs(n - 2)</code>) yazsaydık aynı basamaklar tekrar tekrar hesaplanırdı. n = 5'te bile 3. basamak 2 kez, 2. basamak 3 kez hesaplanır; n = 45'te metot <b>2 milyardan fazla</b> kez çağrılır ve LeetCode "Time Limit Exceeded" verir.</p>
+  </section>
+
+  <footer class="foot">
+    <a href="https://leetcode.com/problems/climbing-stairs/">Soru: LeetCode 70</a>
+    <a href="https://github.com/physerkm/leetcode-solutions/blob/main/src/LeetCode/Problems/P0070_ClimbingStairs/Solution.cs">Kod: Solution.cs</a>
+    <a href="../">Tüm anlatımlar</a>
+    <a href="https://github.com/physerkm/leetcode-solutions">Repo: physerkm/leetcode-solutions</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const MAX_N = 12;
+
+  // Steps: mirrors Solution.cs line by line.
+  // twoAt/oneAt: which stair's count twoBelow/oneBelow hold right now (undefined before they are declared).
+  function buildSteps(n) {
+    const w = [0, 1, 2];
+    for (let k = 3; k <= n; k++) w[k] = w[k - 1] + w[k - 2];
+    const steps = [];
+    let twoAt;
+    let oneAt;
+    let step;
+    let ways;
+    let cur = -1;
+    let known = 0;
+    let show = null;
+    const snap = (s) => steps.push({ w, twoAt, oneAt, step, ways, cur, known, show, changed: [], ...s });
+
+    if (n <= 2) {
+      snap({
+        kind: 'check', lines: ['if'],
+        text: `<code>n = ${n}</code>, yani <code>n &lt;= 2</code> doğru. Bu kadar kısa bir merdiven için hesap yapmaya gerek yok; cevap zaten <code>n</code>.`,
+      });
+      known = n;
+      show = { at: n, split: false };
+      snap({
+        kind: 'done', lines: ['retn'],
+        text: n === 1
+          ? 'Tek basamağa çıkmanın tek yolu var: <code>1</code>. <code>return n</code> → 1.'
+          : 'İki basamağa çıkmanın iki yolu var: <code>1+1</code> ve <code>2</code>. <code>return n</code> → 2.',
+      });
+      return steps;
+    }
+
+    snap({
+      kind: 'check', lines: ['if'],
+      text: `<code>n = ${n}</code>, 2'den büyük olduğu için <code>if</code> atlanıyor. Cevabı basamak basamak, aşağıdan yukarıya hesaplayacağız.`,
+    });
+
+    twoAt = 1;
+    oneAt = 2;
+    known = 2;
+    show = { at: 2, split: false };
+    snap({
+      kind: 'init', lines: ['two', 'one'], changed: ['twoBelow', 'oneBelow'],
+      text: 'İlk iki basamağın cevabını biliyoruz: 1. basamağa tek yol var (<code>1</code>), 2. basamağa iki yol var (<code>1+1</code>, <code>2</code>). <code>twoBelow = 1</code>, <code>oneBelow = 2</code>.',
+    });
+
+    for (step = 3; step <= n; step++) {
+      ways = w[step];
+      cur = step;
+      known = step;
+      show = { at: step, split: true };
+      snap({
+        kind: 'sum', lines: ['for', 'ways'], changed: ['step', 'ways'],
+        text: `<code>step = ${step}</code>: sıra ${step}. basamakta. Buraya ya ${step - 1}. basamaktan 1 adımla (<code>oneBelow</code> = ${w[step - 1]} yol) ya da ${step - 2}. basamaktan 2 adımla (<code>twoBelow</code> = ${w[step - 2]} yol) gelinir. <code>ways = ${w[step - 1]} + ${w[step - 2]}</code> → ${ways}.`,
+      });
+
+      twoAt = oneAt;
+      snap({
+        kind: 'shiftTwo', lines: ['shiftTwo'], changed: ['twoBelow'],
+        text: `<code>twoBelow = oneBelow</code> → ${w[twoAt]}. Şu an iki değişken de ${twoAt}. basamağın sayısını tutuyor.` +
+          (step === 3 ? ` Bu satır <code>oneBelow = ways</code>'den önce gelmeli; yoksa <code>oneBelow</code>'daki ${w[twoAt]} üzerine yazılır ve kaybolurdu.` : ''),
+      });
+
+      oneAt = step;
+      snap({
+        kind: 'shiftOne', lines: ['shiftOne'], changed: ['oneBelow'],
+        text: `<code>oneBelow = ways</code> → ${ways}. İki değişken de bir basamak yukarı kaydı: <code>twoBelow</code> ${step - 1}. basamağın, <code>oneBelow</code> ${step}. basamağın sayısını tutuyor.` +
+          (step < n ? ` Sıradaki tur ${step + 1}. basamak için.` : ''),
+      });
+    }
+
+    cur = -1;
+    snap({
+      kind: 'done', lines: ['for', 'ret'],
+      text: `<code>step</code> ${step} oldu, artık <code>n</code>'den büyük; döngü bitti. <code>return oneBelow</code> → ${w[n]}. ${n} basamaklı merdivene ${w[n]} farklı yoldan çıkılır.`,
+    });
+    return steps;
+  }
+
+  // Rendering
+  const CODE = [
+    ['if', '<span class="kw">if</span> (n &lt;= 2)'],
+    ['retn', '    <span class="kw">return</span> n;'],
+    ['', ''],
+    ['two', '<span class="kw">int</span> twoBelow = 1;'],
+    ['one', '<span class="kw">int</span> oneBelow = 2;'],
+    ['', ''],
+    ['for', '<span class="kw">for</span> (<span class="kw">int</span> step = 3; step &lt;= n; step++)'],
+    ['', '{'],
+    ['ways', '    <span class="kw">int</span> ways = oneBelow + twoBelow;'],
+    ['', ''],
+    ['shiftTwo', '    twoBelow = oneBelow;'],
+    ['shiftOne', '    oneBelow = ways;'],
+    ['', '}'],
+    ['', ''],
+    ['ret', '<span class="kw">return</span> oneBelow;'],
+  ];
+  $('code').innerHTML = CODE.map(([id, html]) => `<span class="ln"${id ? ` data-id="${id}"` : ''}>${html || ' '}</span>`).join('');
+  const codeLines = {};
+  document.querySelectorAll('.ln[data-id]').forEach((el) => { codeLines[el.dataset.id] = el; });
+
+  const TAGS = {
+    check: ['Kontrol', ''], init: ['Başlangıç', ''], sum: ['Topla', ''],
+    shiftTwo: ['twoBelow kayar', ''], shiftOne: ['oneBelow kayar', ''], done: ['Bitti', 'ok'],
+  };
+
+  // Every path to stair k, built the way the formula counts them: paths to k-1 plus "+1", paths to k-2 plus "+2".
+  const PATHS_UP_TO = 6;
+  const P = [[], ['1'], ['1+1', '2']];
+  for (let k = 3; k <= PATHS_UP_TO; k++) P[k] = [...P[k - 1].map((p) => p + '+1'), ...P[k - 2].map((p) => p + '+2')];
+
+  let n = 5;
+  let steps = [];
+  let idx = 0;
+  let timer = null;
+
+  function parse(raw) {
+    const t = raw.trim();
+    if (!/^\d+$/.test(t)) return null;
+    const v = Number(t);
+    return v >= 1 && v <= MAX_N ? v : null;
+  }
+
+  function stairsHtml(st) {
+    const inLoop = st.kind === 'sum' || st.kind === 'shiftTwo' || st.kind === 'shiftOne';
+    let html = '';
+    for (let k = 1; k <= n; k++) {
+      let state = k === st.cur ? 'cur' : (k === st.twoAt || k === st.oneAt) ? 'ref' : k <= st.known ? 'done' : 'todo';
+      if (st.kind === 'done' && k === n) state = 'answer';
+      const t = [];
+      if (inLoop && k === st.step) t.push('<span class="t-step">step</span>');
+      if (k === st.oneAt) t.push('<span class="t-var">oneBelow</span>');
+      if (k === st.twoAt) t.push('<span class="t-var">twoBelow</span>');
+      if (st.kind === 'sum' && k === st.step - 1) t.push('<span class="t-move">+1 adım</span>');
+      if (st.kind === 'sum' && k === st.step - 2) t.push('<span class="t-move">+2 adım</span>');
+      if (st.kind === 'done' && k === n) t.push('<span class="t-answer">cevap</span>');
+      const value = k <= st.known ? st.w[k] : '?';
+      html += `<div class="stair"><div class="tags">${t.join('')}</div>` +
+        `<div class="block" data-state="${state}" style="height:${34 + k * 14}px">${value}</div>` +
+        `<div class="num">${k}${k === n ? '<small>tepe</small>' : ''}</div></div>`;
+    }
+    return html;
+  }
+
+  function chips(list, last) {
+    return `<div class="chips">${list.map((p) => `<span class="path">${p}${last ? `<b>${last}</b>` : ''}</span>`).join('')}</div>`;
+  }
+
+  function pathsHtml(st) {
+    const sh = st.show;
+    const w = st.w;
+    if (!sh) return '<p class="paths-empty">Henüz hesaplanan basamak yok.</p>';
+    if (!sh.split) {
+      let html = '';
+      for (let k = 1; k <= sh.at; k++) {
+        html += `<div class="group"><span class="lbl">${k}. basamağa çıkan yollar (${w[k]})</span>${chips(P[k])}</div>`;
+      }
+      return html;
+    }
+    const s = sh.at;
+    const head = `<p class="paths-head">${s}. basamağa çıkan yollar: ${w[s - 1]} + ${w[s - 2]} = <b>${w[s]}</b></p>`;
+    if (s > PATHS_UP_TO) {
+      return head + `<p class="paths-empty">Bu kadar yol ekrana sığmaz ama hesap aynı: ${s - 1}. basamağın ${w[s - 1]} yolunun sonuna <b>+1</b>, ${s - 2}. basamağın ${w[s - 2]} yolunun sonuna <b>+2</b> eklenir.</p>`;
+    }
+    return head +
+      `<div class="group"><span class="lbl">${s - 1}. basamaktan 1 adımla (${w[s - 1]} yol)</span>${chips(P[s - 1], '+1')}</div>` +
+      `<div class="group"><span class="lbl">${s - 2}. basamaktan 2 adımla (${w[s - 2]} yol)</span>${chips(P[s - 2], '+2')}</div>`;
+  }
+
+  function render() {
+    const st = steps[idx];
+    $('stairs').innerHTML = stairsHtml(st);
+
+    const vars = [
+      ['n', n], ['step', st.step], ['ways', st.ways],
+      ['twoBelow', st.twoAt === undefined ? undefined : st.w[st.twoAt]],
+      ['oneBelow', st.oneAt === undefined ? undefined : st.w[st.oneAt]],
+    ];
+    $('vars').innerHTML = vars.map(([name, v]) =>
+      `<div class="var${st.changed.includes(name) ? ' changed' : ''}"><dt>${name}</dt><dd>${v === undefined ? '—' : v}</dd></div>`).join('');
+
+    $('paths').innerHTML = pathsHtml(st);
+
+    Object.keys(codeLines).forEach((id) => codeLines[id].classList.toggle('hl', st.lines.includes(id)));
+
+    const [tagText, tagKind] = TAGS[st.kind];
+    $('step-count').textContent = `Adım ${idx + 1} / ${steps.length}`;
+    $('step-tag').textContent = tagText;
+    $('step-tag').dataset.kind = tagKind;
+    $('step-text').innerHTML = st.text;
+    $('prev-btn').disabled = idx === 0;
+    $('reset').disabled = idx === 0;
+    $('next-btn').disabled = idx === steps.length - 1;
+
+    document.querySelectorAll('.presets button').forEach((b) => b.setAttribute('aria-pressed', String(Number(b.dataset.n) === n)));
+  }
+
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    $('play').textContent = '▶ Oynat';
+  }
+
+  function restart(value) {
+    stop();
+    n = value;
+    steps = buildSteps(n);
+    idx = 0;
+    render();
+  }
+
+  $('next-btn').addEventListener('click', () => { stop(); if (idx < steps.length - 1) { idx++; render(); } });
+  $('prev-btn').addEventListener('click', () => { stop(); if (idx > 0) { idx--; render(); } });
+  $('reset').addEventListener('click', () => { stop(); idx = 0; render(); });
+  $('play').addEventListener('click', () => {
+    if (timer) { stop(); return; }
+    if (idx === steps.length - 1) { idx = 0; render(); }
+    $('play').textContent = '❚❚ Durdur';
+    timer = setInterval(() => {
+      if (idx < steps.length - 1) { idx++; render(); }
+      if (idx === steps.length - 1) stop();
+    }, 1100);
+  });
+  document.querySelectorAll('.presets button').forEach((b) => b.addEventListener('click', () => {
+    $('n').value = b.dataset.n;
+    $('n-err').hidden = true;
+    restart(Number(b.dataset.n));
+  }));
+  $('n').addEventListener('input', (e) => {
+    const parsed = parse(e.target.value);
+    if (parsed === null) { $('n-err').hidden = false; return; }
+    $('n-err').hidden = true;
+    restart(parsed);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next-btn').click();
+    else if (e.key === 'ArrowLeft') $('prev-btn').click();
+  });
+
+  restart(n);
+})();
+</script>
+</body>
+</html>
