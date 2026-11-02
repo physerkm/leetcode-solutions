@@ -17,12 +17,19 @@ public static class ListNodeHelper
         return dummy.next;
     }
 
+    // Throws if the list loops back on itself, so a buggy solution fails the test instead of hanging it.
     public static int[] ToArray(ListNode head)
     {
         var result = new List<int>();
+        var seen = new HashSet<ListNode>();
 
         for (var node = head; node != null; node = node.next)
+        {
+            if (!seen.Add(node))
+                throw new InvalidOperationException($"The list has a cycle: node {node.val} is visited twice.");
+
             result.Add(node.val);
+        }
 
         return result.ToArray();
     }

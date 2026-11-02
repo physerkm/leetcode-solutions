@@ -12,6 +12,15 @@ public class HelperTests
     }
 
     [Fact]
+    public void ListNode_ToArrayThrowsOnCycle()
+    {
+        var head = ListNodeHelper.FromArray(1, 2);
+        head.next.next = head;
+
+        Assert.Throws<InvalidOperationException>(() => ListNodeHelper.ToArray(head));
+    }
+
+    [Fact]
     public void TreeNode_RoundTrips()
     {
         int?[] values = { 1, null, 2, 3 };
