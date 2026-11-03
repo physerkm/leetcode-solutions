@@ -1,32 +1,27 @@
 namespace LeetCode.Problems.P0238_ProductOfArrayExceptSelf;
 
 // https://leetcode.com/problems/product-of-array-except-self/
+// Time: O(n), Space: O(1) extra (the returned array does not count)
 
 public class Solution
 {
     public int[] ProductExceptSelf(int[] nums)
     {
-        // Çözümünü buraya yaz.
-        int[] left = new int[nums.Length];
-        int[] right = new int[nums.Length];
-        int[] answer = new int[nums.Length];
+        int n = nums.Length;
+        int[] answer = new int[n];
 
-        left[0] = 1;
-        for (int i = 1; i < nums.Length; i++)
+        // Left to right: answer[i] = product of everything left of i.
+        answer[0] = 1;
+        for (int i = 1; i < n; i++)
+            answer[i] = answer[i - 1] * nums[i - 1];
+
+        // Right to left: `right` is the product of everything right of i.
+        int right = 1;
+        for (int i = n - 1; i >= 0; i--)
         {
-            left[i] = left[i - 1] * nums[i - 1];
+            answer[i] *= right;
+            right *= nums[i];
         }
-
-        right[nums.Length - 1] = 1;
-        for (int i = nums.Length - 2; i >= 0; i--)
-        {
-            right[i] = right[i + 1] * nums[i + 1];
-        }
-
-        foreach(var i in Enumerable.Range(0, nums.Length))
-        {
-            answer[i] = left[i] * right[i];
-        }                               
 
         return answer;
     }

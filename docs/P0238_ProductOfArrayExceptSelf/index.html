@@ -1,0 +1,488 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kendisi Hariç Çarpım</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: one reading column; the stepper is a single tool panel (controls, step card, nums/answer rows, then variables | code) that stacks on phones. */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --ink: #141b26;
+  --muted: #5a6779;
+  --line: #d6dce6;
+  --accent: #3346c8;
+  --accent-ink: #ffffff;
+  --range: #e3e9fb;
+  --range-ink: #1d2a6b;
+  --right-soft: #fdeccc;
+  --right-soft-ink: #6b3d00;
+  --good: #17824a;
+  --good-soft: #dcf1e4;
+  --good-soft-ink: #145c36;
+  --bad: #b8402a;
+  --code-bg: #f7f8fb;
+  --code-hl: #dfe5fb;
+  --kw: #7a3aa8;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+    --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+    --right-soft: #3a2a10; --right-soft-ink: #f5c77a;
+    --good: #3fbf7a; --good-soft: #14301f; --good-soft-ink: #8fe0b2; --bad: #ff7d66;
+    --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+  --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+  --right-soft: #3a2a10; --right-soft-ink: #f5c77a;
+  --good: #3fbf7a; --good-soft: #14301f; --good-soft-ink: #8fe0b2; --bad: #ff7d66;
+  --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0;
+  color-scheme: dark;
+}
+
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
+.wrap {
+  max-width: 1040px; margin: 0 auto;
+  padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px;
+}
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--muted); margin: 0; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 6vw, 54px); line-height: 1.05; letter-spacing: -.02em; margin: 8px 0 14px; text-wrap: balance; }
+.lead { max-width: 62ch; color: var(--muted); margin: 0; font-size: 17px; }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -.01em; margin: 0 0 18px; text-wrap: balance; }
+code { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+
+/* Idea */
+.idea { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; list-style: none; padding: 0; margin: 0; }
+.idea li { border-top: 2px solid var(--ink); padding-top: 12px; min-width: 0; }
+.idea .n { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.idea h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 2px 0 6px; text-wrap: balance; }
+.idea p { margin: 0; color: var(--muted); font-size: 15px; }
+@media (max-width: 760px) { .idea { grid-template-columns: 1fr; gap: 20px; } }
+
+/* Stepper panel */
+.stepper { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+@media (max-width: 560px) { .stepper { padding: 16px; } }
+.stepper h2 { margin: 0; }
+.controls { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+.field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+input[type="text"] { width: 16em; max-width: 100%; box-sizing: border-box; font: 600 18px var(--font-mono); padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.err { margin: 0; font-size: 13px; color: var(--bad); }
+button { font: 500 14px var(--font-body); padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .4; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.presets button { font-size: 13px; padding: 7px 10px; }
+.presets .mono { font-family: var(--font-mono); font-weight: 700; margin-right: 4px; }
+.presets button[aria-pressed="true"] { border-color: var(--accent); background: var(--range); color: var(--range-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav { display: flex; flex-wrap: wrap; gap: 8px; }
+#play { min-width: 7.5em; }
+
+.step { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+.step-meta { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag { font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--range); color: var(--range-ink); }
+.tag[data-kind="right"] { background: var(--right-soft); color: var(--right-soft-ink); }
+.tag[data-kind="ok"] { background: var(--good); color: var(--surface); }
+#step-text { margin: 8px 0 0; font-size: 16.5px; max-width: 78ch; min-height: 3.2em; }
+
+.panel-label { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 8px; }
+
+/* Two rows (nums, answer) on one grid so the boxes line up column by column. */
+.grid-scroll { overflow-x: auto; padding: 4px 6px 6px; }
+.grid { display: grid; gap: 8px; width: max-content; align-items: center; }
+.rowlabel { font: 600 13px var(--font-mono); color: var(--muted); text-align: right; padding-right: 6px; }
+.tags { display: flex; justify-content: center; align-items: flex-end; min-height: 18px; font: 600 11px var(--font-mono); color: var(--accent); }
+.cell {
+  width: 58px; height: 48px; box-sizing: border-box; border-radius: 10px;
+  display: grid; place-items: center;
+  font: 700 18px var(--font-mono); font-variant-numeric: tabular-nums;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  transition: background-color .2s, color .2s, border-color .2s;
+}
+.cell[data-state="left"], .cell[data-state="partial"] { background: var(--range); color: var(--range-ink); border-color: transparent; }
+.cell[data-state="right"] { background: var(--right-soft); color: var(--right-soft-ink); border-color: transparent; }
+.cell[data-state="self"] { background: transparent; color: var(--muted); border-style: dashed; text-decoration: line-through; }
+.cell[data-state="empty"] { color: var(--muted); font-weight: 500; border-style: dashed; }
+.cell[data-state="done"] { background: var(--good-soft); color: var(--good-soft-ink); border-color: transparent; }
+.cell.target { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .cell { transition: none; } }
+.idx { font: 500 12px var(--font-mono); color: var(--muted); text-align: center; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin-top: 8px; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; border: 1px solid var(--line); }
+.sw.left { background: var(--range); border-color: transparent; }
+.sw.right { background: var(--right-soft); border-color: transparent; }
+.sw.self { background: transparent; border-style: dashed; }
+.sw.done { background: var(--good-soft); border-color: transparent; }
+
+/* Variables | code */
+.board { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 28px; }
+@media (max-width: 880px) { .board { grid-template-columns: 1fr; } }
+.col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.vars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.var { border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; background: var(--bg); min-width: 0; }
+.var dt { font: 400 12px var(--font-mono); color: var(--muted); }
+.var dd { margin: 0; font: 600 18px var(--font-mono); font-variant-numeric: tabular-nums; }
+.var.changed { border-color: var(--accent); background: var(--range); }
+.var.changed dd { color: var(--range-ink); }
+.parts { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--bg); display: flex; flex-direction: column; gap: 6px; }
+.parts div span { display: block; font-size: 12px; color: var(--muted); }
+.parts div b { font: 600 15px var(--font-mono); overflow-wrap: anywhere; }
+.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 0; overflow-x: auto; font: 13px/1.6 var(--font-mono); }
+@media (max-width: 560px) { .code { font-size: 12px; } }
+.ln { display: block; padding: 0 14px 0 11px; white-space: pre; border-left: 3px solid transparent; }
+.ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
+.kw { color: var(--kw); }
+
+.why p { margin: 0 0 10px; max-width: 66ch; color: var(--muted); }
+.why p:last-child { margin-bottom: 0; }
+.why b { color: var(--ink); }
+.foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+.foot a { color: var(--accent); }
+
+/* No ligatures: `>=` and `*=` should look the way they are typed.
+   Kept last because the `font` shorthand above would reset it. */
+code, .code, .cell, .var dd, .parts b, input[type="text"] { font-variant-ligatures: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">LeetCode 238 · Product of Array Except Self · Medium</p>
+    <h1>Kendisi Hariç Çarpım</h1>
+    <p class="lead">Çözümün her adımını burada izleyebilirsin. Bir dizi seç, <b>İleri</b>'ye bas ya da <b>Oynat</b>'a tıkla; her kutunun cevabının solundaki ve sağındaki sayıların çarpımından nasıl oluştuğunu gör.</p>
+  </header>
+
+  <section aria-labelledby="idea-h">
+    <h2 id="idea-h">Fikir üç adımda</h2>
+    <ol class="idea">
+      <li>
+        <span class="n">1</span>
+        <h3>Kendisi hariç = sol × sağ</h3>
+        <p>Bir sayıyı kapatınca kalanlar ikiye ayrılır: solundakiler ve sağındakiler. Cevap, bu iki grubun çarpımlarının çarpımıdır.</p>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <h3>Sol çarpımları answer'a yaz</h3>
+        <p>Soldan sağa giderken her kutuya, bir önceki kutunun değeri × bir önceki sayı yazılır. Solunda sayı olmayan ilk kutuya 1 yazılır.</p>
+      </li>
+      <li>
+        <span class="n">3</span>
+        <h3>Sağı tek değişkende biriktir</h3>
+        <p>Sağdan sola dönerken <code>right</code>, geçtiğimiz sayıların çarpımını tutar. <code>answer[i]</code>'yi <code>right</code> ile çarpınca o kutunun cevabı tamamlanır.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="stepper" aria-labelledby="st-h">
+    <h2 id="st-h">Adım adım izle</h2>
+
+    <div class="controls">
+      <div class="row">
+        <div class="field">
+          <label for="list">Dizi (virgülle ayır, 2 ile 8 sayı)</label>
+          <input id="list" type="text" value="1, 2, 3, 4" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="nav">
+          <button type="button" id="reset">Baştan</button>
+          <button type="button" id="prev-btn">← Geri</button>
+          <button type="button" id="next-btn" class="primary">İleri →</button>
+          <button type="button" id="play">▶ Oynat</button>
+        </div>
+      </div>
+      <div class="presets" role="group" aria-label="Hazır örnekler">
+        <button type="button" data-l="1, 2, 3, 4"><span class="mono">[1,2,3,4]</span></button>
+        <button type="button" data-l="-1, 1, 0, -3, 3"><span class="mono">[-1,1,0,-3,3]</span></button>
+        <button type="button" data-l="2, 3"><span class="mono">[2,3]</span>en kısa</button>
+        <button type="button" data-l="0, 4, 0"><span class="mono">[0,4,0]</span>iki sıfır</button>
+      </div>
+      <p class="err" id="list-err" hidden>Virgülle ayrılmış en az 2, en fazla 8 tam sayı yaz. Sayılar -30 ile 30 arasında olmalı.</p>
+    </div>
+
+    <div class="step" aria-live="polite">
+      <div class="step-meta"><span id="step-count"></span><span id="step-tag" class="tag"></span></div>
+      <p id="step-text"></p>
+    </div>
+
+    <div>
+      <p class="panel-label">Diziler (üstte girdi, altta cevap; aynı sütun aynı kutu)</p>
+      <div class="grid-scroll"><div class="grid" id="grid"></div></div>
+      <div class="legend">
+        <span><i class="sw left"></i>solundakiler / answer'daki sol çarpım</span>
+        <span><i class="sw right"></i>sağındakiler (right)</span>
+        <span><i class="sw self"></i>kapatılan sayı (kendisi)</span>
+        <span><i class="sw done"></i>cevabı tamamlandı</span>
+      </div>
+    </div>
+
+    <div class="board">
+      <div class="col">
+        <p class="panel-label">Değişkenler</p>
+        <dl class="vars" id="vars"></dl>
+        <div class="parts">
+          <div><span>i'nin solundakiler</span><b id="left-part"></b></div>
+          <div><span>i'nin sağındakiler</span><b id="right-part"></b></div>
+        </div>
+      </div>
+      <div class="col">
+        <p class="panel-label">Kod (Solution.cs içindeki metot)</p>
+        <div class="code" id="code" role="region" aria-label="C# kodu" tabindex="0"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-h">
+    <h2 id="why-h">Neden O(1) ekstra bellek?</h2>
+    <p>Diziyi bir kez soldan sağa, bir kez sağdan sola geziyoruz: <b>O(n) zaman</b>.</p>
+    <p>Daha kolay bir çözümde "sol" ve "sağ" çarpımları <code>left</code> ve <code>right</code> adlı iki ayrı dizide tutulur ve sonra kutu kutu çarpılır. O da O(n) zamanda çalışır ama n'er elemanlık iki dizi açtığı için <b>O(n) bellek</b> kullanır. Burada sol çarpımları doğrudan <code>answer</code>'a yazıyoruz; sağ çarpımları ise hiç saklamıyoruz, sağdan sola giderken tek bir <code>right</code> değişkeninde biriktiriyoruz. <code>answer</code> zaten döndürülecek dizi olduğu için hesaba katılmıyor; fazladan sadece <code>n</code>, <code>i</code> ve <code>right</code> var: <b>O(1) ekstra bellek</b>.</p>
+    <p>Hepsini çarpıp <code>nums[i]</code>'ye bölmek soruda yasak; dizide 0 varsa da 0'a bölünemeyeceği için çalışmaz. Sol × sağ yöntemi hiç bölme yapmaz, 0'lar da kendiliğinden doğru sonucu verir.</p>
+  </section>
+
+  <footer class="foot">
+    <a href="https://leetcode.com/problems/product-of-array-except-self/">Soru: LeetCode 238</a>
+    <a href="https://github.com/physerkm/leetcode-solutions/blob/main/src/LeetCode/Problems/P0238_ProductOfArrayExceptSelf/Solution.cs">Kod: Solution.cs</a>
+    <a href="../">Tüm anlatımlar</a>
+    <a href="https://github.com/physerkm/leetcode-solutions">Repo: physerkm/leetcode-solutions</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const MAX_LEN = 8;
+
+  // Steps: mirrors Solution.cs line by line.
+  // answerState per box: 'empty' (still 0 from new int[n]), 'partial' (holds the left product), 'done' (final).
+  // group: which nums boxes to tint for this step ('left', 'right', 'self' or 'plain').
+  function buildSteps(vals) {
+    const n = vals.length;
+    const answer = Array(n).fill(0);
+    const answerState = Array(n).fill('empty');
+    const steps = [];
+    let i;
+    let right;
+    let firstMul = true;
+    let firstGrow = true;
+    const fmt = (v) => (v < 0 ? `(${v})` : `${v}`);
+    const prod = (arr) => (arr.length === 0 ? '1 (hiç sayı yok)' : arr.map(fmt).join(' × '));
+    const groups = (spec) => vals.map((_, k) => spec(k));
+    const snap = (s) => steps.push({
+      answer: answer.slice(), answerState: answerState.slice(), i, right,
+      target: -1, group: Array(n).fill('plain'), changed: [], ...s,
+    });
+
+    snap({
+      kind: 'start', lines: ['n', 'answer'], changed: ['n'],
+      text: `<code>n = ${n}</code>. <code>answer</code> dizisi ${n} kutuyla oluşturuldu; C#'ta yeni bir <code>int</code> dizisinin kutuları 0 ile başlar. Plan: <code>answer[i]</code> = (solundakilerin çarpımı) × (sağındakilerin çarpımı). Önce soldakileri yazacağız.`,
+    });
+
+    answer[0] = 1;
+    answerState[0] = 'partial';
+    snap({
+      kind: 'left', lines: ['a0'], target: 0, group: groups((k) => (k === 0 ? 'self' : 'plain')),
+      text: '<code>answer[0] = 1</code>. 0. kutunun solunda hiç sayı yok. Çarpmada "hiç sayı yok" 1 demek, çünkü 1 ile çarpmak hiçbir şeyi değiştirmez.',
+    });
+
+    for (i = 1; i < n; i++) {
+      answer[i] = answer[i - 1] * vals[i - 1];
+      answerState[i] = 'partial';
+      snap({
+        kind: 'left', lines: ['for1', 'left'], changed: ['i'], target: i,
+        group: groups((k) => (k < i ? 'left' : k === i ? 'self' : 'plain')),
+        text: `<code>answer[${i}] = answer[${i - 1}] * nums[${i - 1}]</code> → ${fmt(answer[i - 1])} × ${fmt(vals[i - 1])} = ${answer[i]}. Bu, ${i}. kutunun solundaki sayıların çarpımı: ${prod(vals.slice(0, i))}.`,
+      });
+    }
+
+    i = undefined;
+    right = 1;
+    snap({
+      kind: 'right', lines: ['right'], changed: ['right'],
+      text: 'Sol çarpımlar <code>answer</code>\'a yazıldı. Şimdi sağdan sola gideceğiz. <code>right</code>, i\'nin sağındaki sayıların çarpımını tutacak; en sağdaki kutunun sağında sayı olmadığı için 1 ile başlıyor.',
+    });
+
+    for (i = n - 1; i >= 0; i--) {
+      const before = answer[i];
+      answer[i] = before * right;
+      answerState[i] = 'done';
+      snap({
+        kind: 'mul', lines: ['for2', 'mul'], changed: ['i'], target: i,
+        group: groups((k) => (k < i ? 'left' : k === i ? 'self' : 'right')),
+        text: `<code>answer[${i}] *= right</code> → ${fmt(before)} × ${fmt(right)} = ${answer[i]}. ` +
+          `${fmt(before)} solundakilerin, ${fmt(right)} sağındakilerin çarpımıydı; ${i}. kutunun cevabı tamamlandı.` +
+          (firstMul ? ' (<code>a *= b</code>, <code>a = a * b</code>\'nin kısa yazılışı.)' : ''),
+      });
+      firstMul = false;
+
+      const oldRight = right;
+      right *= vals[i];
+      snap({
+        kind: 'grow', lines: ['grow'], changed: ['right'], target: -1,
+        group: groups((k) => (k >= i ? 'right' : 'plain')),
+        text: `<code>right *= nums[${i}]</code> → ${fmt(oldRight)} × ${fmt(vals[i])} = ${right}.` +
+          (i > 0
+            ? ` ${i - 1}. kutuya geçince ${fmt(vals[i])} de onun sağında kalıyor, o yüzden <code>right</code>'a katıyoruz.`
+            : ' Döngünün son turu; bu çarpım artık kullanılmayacak.') +
+          (firstGrow ? ' (<code>right *= nums[i]</code>, <code>right = right * nums[i]</code> demek.)' : ''),
+      });
+      firstGrow = false;
+    }
+
+    snap({
+      kind: 'done', lines: ['ret'],
+      text: `Döngü bitti. <code>return answer</code> → <code>[${answer.join(', ')}]</code>. Her kutuda, kendisi hariç bütün sayıların çarpımı var.`,
+    });
+    return steps;
+  }
+
+  // Rendering
+  const CODE = [
+    ['n', '<span class="kw">int</span> n = nums.Length;'],
+    ['answer', '<span class="kw">int</span>[] answer = <span class="kw">new int</span>[n];'],
+    ['', ''],
+    ['a0', 'answer[0] = 1;'],
+    ['for1', '<span class="kw">for</span> (<span class="kw">int</span> i = 1; i &lt; n; i++)'],
+    ['left', '    answer[i] = answer[i - 1] * nums[i - 1];'],
+    ['', ''],
+    ['right', '<span class="kw">int</span> right = 1;'],
+    ['for2', '<span class="kw">for</span> (<span class="kw">int</span> i = n - 1; i &gt;= 0; i--)'],
+    ['', '{'],
+    ['mul', '    answer[i] *= right;'],
+    ['grow', '    right *= nums[i];'],
+    ['', '}'],
+    ['', ''],
+    ['ret', '<span class="kw">return</span> answer;'],
+  ];
+  $('code').innerHTML = CODE.map(([id, html]) => `<span class="ln"${id ? ` data-id="${id}"` : ''}>${html || ' '}</span>`).join('');
+  const codeLines = {};
+  document.querySelectorAll('.ln[data-id]').forEach((el) => { codeLines[el.dataset.id] = el; });
+
+  const TAGS = {
+    start: ['Başlangıç', ''], left: ['Sol çarpım', ''], right: ['Sağa geç', 'right'],
+    mul: ['Sağla çarp', 'right'], grow: ['right büyür', 'right'], done: ['Bitti', 'ok'],
+  };
+
+  let listText = '1, 2, 3, 4';
+  let vals = [];
+  let steps = [];
+  let idx = 0;
+  let timer = null;
+
+  function parse(raw) {
+    const parts = raw.split(/[\s,]+/).filter(Boolean);
+    if (parts.length < 2 || parts.length > MAX_LEN) return null;
+    const out = parts.map(Number);
+    return out.every((v) => Number.isInteger(v) && v >= -30 && v <= 30) ? out : null;
+  }
+
+  const fmt = (v) => (v < 0 ? `(${v})` : `${v}`);
+  const prodLine = (arr) => (arr.length === 0 ? 'hiç sayı yok → 1' : `${arr.map(fmt).join(' × ')} = ${arr.reduce((a, b) => a * b, 1)}`);
+
+  function render() {
+    const st = steps[idx];
+    const n = vals.length;
+    const grid = $('grid');
+    grid.style.gridTemplateColumns = `auto repeat(${n}, 58px)`;
+
+    let html = '<span></span>';
+    for (let k = 0; k < n; k++) html += `<div class="tags">${k === st.i ? 'i' : ''}</div>`;
+    html += '<span class="rowlabel">nums</span>';
+    for (let k = 0; k < n; k++) html += `<div class="cell" data-state="${st.group[k]}">${vals[k]}</div>`;
+    html += '<span class="rowlabel">answer</span>';
+    for (let k = 0; k < n; k++) {
+      html += `<div class="cell${k === st.target ? ' target' : ''}" data-state="${st.answerState[k]}">${st.answer[k] === 0 ? 0 : st.answer[k]}</div>`;
+    }
+    html += '<span></span>';
+    for (let k = 0; k < n; k++) html += `<div class="idx">[${k}]</div>`;
+    grid.innerHTML = html;
+
+    const vars = [['n', n], ['i', st.i], ['right', st.right]];
+    $('vars').innerHTML = vars.map(([name, v]) =>
+      `<div class="var${st.changed.includes(name) ? ' changed' : ''}"><dt>${name}</dt><dd>${v === undefined ? '—' : v === 0 ? 0 : v}</dd></div>`).join('');
+
+    if (st.i === undefined) {
+      $('left-part').textContent = '—';
+      $('right-part').textContent = '—';
+    } else {
+      $('left-part').textContent = prodLine(vals.slice(0, st.i));
+      $('right-part').textContent = prodLine(vals.slice(st.i + 1));
+    }
+
+    Object.keys(codeLines).forEach((id) => codeLines[id].classList.toggle('hl', st.lines.includes(id)));
+
+    const [tagText, tagKind] = TAGS[st.kind];
+    $('step-count').textContent = `Adım ${idx + 1} / ${steps.length}`;
+    $('step-tag').textContent = tagText;
+    $('step-tag').dataset.kind = tagKind;
+    $('step-text').innerHTML = st.text;
+    $('prev-btn').disabled = idx === 0;
+    $('reset').disabled = idx === 0;
+    $('next-btn').disabled = idx === steps.length - 1;
+
+    document.querySelectorAll('.presets button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.l === listText)));
+  }
+
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    $('play').textContent = '▶ Oynat';
+  }
+
+  function restart(text, parsed) {
+    stop();
+    listText = text;
+    vals = parsed;
+    steps = buildSteps(vals);
+    idx = 0;
+    render();
+  }
+
+  $('next-btn').addEventListener('click', () => { stop(); if (idx < steps.length - 1) { idx++; render(); } });
+  $('prev-btn').addEventListener('click', () => { stop(); if (idx > 0) { idx--; render(); } });
+  $('reset').addEventListener('click', () => { stop(); idx = 0; render(); });
+  $('play').addEventListener('click', () => {
+    if (timer) { stop(); return; }
+    if (idx === steps.length - 1) { idx = 0; render(); }
+    $('play').textContent = '❚❚ Durdur';
+    timer = setInterval(() => {
+      if (idx < steps.length - 1) { idx++; render(); }
+      if (idx === steps.length - 1) stop();
+    }, 1100);
+  });
+  document.querySelectorAll('.presets button').forEach((b) => b.addEventListener('click', () => {
+    $('list').value = b.dataset.l;
+    $('list-err').hidden = true;
+    restart(b.dataset.l, parse(b.dataset.l));
+  }));
+  $('list').addEventListener('input', (e) => {
+    const parsed = parse(e.target.value);
+    if (!parsed) { $('list-err').hidden = false; return; }
+    $('list-err').hidden = true;
+    restart(e.target.value, parsed);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next-btn').click();
+    else if (e.key === 'ArrowLeft') $('prev-btn').click();
+  });
+
+  restart(listText, parse(listText));
+})();
+</script>
+</body>
+</html>
