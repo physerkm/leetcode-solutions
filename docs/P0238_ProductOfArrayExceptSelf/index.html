@@ -154,6 +154,8 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .why p { margin: 0 0 10px; max-width: 66ch; color: var(--muted); }
 .why p:last-child { margin-bottom: 0; }
 .why b { color: var(--ink); }
+.video video { display: block; width: 100%; max-width: 880px; height: auto; aspect-ratio: 16 / 9; border-radius: 12px; border: 1px solid var(--line); background: #000; }
+.video-note { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
 .foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
 .foot a { color: var(--accent); }
 
@@ -169,6 +171,15 @@ code, .code, .cell, .var dd, .parts b, input[type="text"] { font-variant-ligatur
     <h1>Kendisi Hariç Çarpım</h1>
     <p class="lead">Çözümün her adımını burada izleyebilirsin. Bir dizi seç, <b>İleri</b>'ye bas ya da <b>Oynat</b>'a tıkla; her kutunun cevabının solundaki ve sağındaki sayıların çarpımından nasıl oluştuğunu gör.</p>
   </header>
+
+  <section class="video" id="video" aria-labelledby="video-h">
+    <h2 id="video-h">Video anlatım</h2>
+    <video controls preload="metadata" poster="poster.jpg" width="1280" height="720">
+      <source src="video.mp4" type="video/mp4">
+      Tarayıcın videoyu oynatamıyor; <a href="video.mp4">buradan indirebilirsin</a>.
+    </video>
+    <p class="video-note">3,5 dakikalık Türkçe anlatım: soru, "sol × sağ" fikri ve iki yürüyüş. Seslendirme: ElevenLabs.</p>
+  </section>
 
   <section aria-labelledby="idea-h">
     <h2 id="idea-h">Fikir üç adımda</h2>
