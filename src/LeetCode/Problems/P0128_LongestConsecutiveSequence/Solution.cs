@@ -1,36 +1,28 @@
 namespace LeetCode.Problems.P0128_LongestConsecutiveSequence;
 
 // https://leetcode.com/problems/longest-consecutive-sequence/
+// Time: O(n), Space: O(n)
 
 public class Solution
 {
     public int LongestConsecutive(int[] nums)
     {
-        // Çözümünü buraya yaz.
-        if (nums.Length == 0)
-            return 0;
+        // Duplicates collapse, and "is x here?" becomes an O(1) lookup.
+        HashSet<int> set = new HashSet<int>(nums);
+        int longest = 0;
 
-        Array.Sort(nums);
-
-        int longest = 1;
-        int current = 1;
-
-        for (int i = 1; i < nums.Length; i++)
+        // Loop over the set, not nums: a run start repeated many times is then counted once.
+        foreach (int num in set)
         {
-            if (nums[i] == nums[i - 1] + 1)
-            {
-                current++;
-            }
-            else if (nums[i] == nums[i - 1])
-            {
-                
-            }
-            else
-            {
-                current = 1;
-            }
-            
-            longest = Math.Max(longest, current);
+            // num - 1 is present, so num is inside a run that its real start will count.
+            if (set.Contains(num - 1))
+                continue;
+
+            int length = 1;
+            while (set.Contains(num + length))
+                length++;
+
+            longest = Math.Max(longest, length);
         }
 
         return longest;

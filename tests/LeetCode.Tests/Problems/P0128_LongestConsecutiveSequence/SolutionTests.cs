@@ -39,4 +39,23 @@ public class SolutionTests
 
         Assert.Equal(n, new Solution().LongestConsecutive(nums));
     }
+
+    [Fact]
+    public void LongestConsecutive_HandlesManyCopiesOfTheRunStart()
+    {
+        // 50000 copies of 1, then 1..50000. Counting the run once per copy would take billions of steps.
+        int[] nums = Enumerable.Repeat(1, 50_000).Concat(Enumerable.Range(1, 50_000)).ToArray();
+
+        Assert.Equal(50_000, new Solution().LongestConsecutive(nums));
+    }
+
+    [Fact]
+    public void LongestConsecutive_LeavesInputUnchanged()
+    {
+        int[] nums = { 100, 4, 200, 1, 3, 2 };
+
+        new Solution().LongestConsecutive(nums);
+
+        Assert.Equal(new[] { 100, 4, 200, 1, 3, 2 }, nums);
+    }
 }

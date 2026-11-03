@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>En Uzun Ardışık Dizi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: one reading column; the stepper is a single tool panel (controls, step card, number line, then variables | code) that stacks on phones. */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --ink: #141b26;
+  --muted: #5a6779;
+  --line: #d6dce6;
+  --accent: #3346c8;
+  --accent-ink: #ffffff;
+  --range: #e3e9fb;
+  --range-ink: #1d2a6b;
+  --probe: #c46f00;
+  --good: #17824a;
+  --good-soft: #dcf1e4;
+  --good-soft-ink: #145c36;
+  --bad: #b8402a;
+  --code-bg: #f7f8fb;
+  --code-hl: #dfe5fb;
+  --kw: #7a3aa8;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+    --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff; --probe: #e6a23c;
+    --good: #3fbf7a; --good-soft: #14301f; --good-soft-ink: #8fe0b2; --bad: #ff7d66;
+    --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+  --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff; --probe: #e6a23c;
+  --good: #3fbf7a; --good-soft: #14301f; --good-soft-ink: #8fe0b2; --bad: #ff7d66;
+  --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0;
+  color-scheme: dark;
+}
+
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
+.wrap {
+  max-width: 1040px; margin: 0 auto;
+  padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px;
+}
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--muted); margin: 0; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 6vw, 54px); line-height: 1.05; letter-spacing: -.02em; margin: 8px 0 14px; text-wrap: balance; }
+.lead { max-width: 62ch; color: var(--muted); margin: 0; font-size: 17px; }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -.01em; margin: 0 0 18px; text-wrap: balance; }
+code { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+
+/* Idea */
+.idea { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; list-style: none; padding: 0; margin: 0; }
+.idea li { border-top: 2px solid var(--ink); padding-top: 12px; min-width: 0; }
+.idea .n { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.idea h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 2px 0 6px; text-wrap: balance; }
+.idea p { margin: 0; color: var(--muted); font-size: 15px; }
+@media (max-width: 760px) { .idea { grid-template-columns: 1fr; gap: 20px; } }
+
+/* Stepper panel */
+.stepper { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+@media (max-width: 560px) { .stepper { padding: 16px; } }
+.stepper h2 { margin: 0; }
+.controls { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+.field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+input[type="text"] { width: 18em; max-width: 100%; box-sizing: border-box; font: 600 18px var(--font-mono); padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.err { margin: 0; font-size: 13px; color: var(--bad); }
+button { font: 500 14px var(--font-body); padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .4; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.presets button { font-size: 13px; padding: 7px 10px; }
+.presets .mono { font-family: var(--font-mono); font-weight: 700; margin-right: 4px; }
+.presets button[aria-pressed="true"] { border-color: var(--accent); background: var(--range); color: var(--range-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav { display: flex; flex-wrap: wrap; gap: 8px; }
+#play { min-width: 7.5em; }
+
+.step { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+.step-meta { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag { font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--range); color: var(--range-ink); }
+.tag[data-kind="skip"] { background: var(--code-bg); color: var(--muted); border: 1px solid var(--line); }
+.tag[data-kind="ok"] { background: var(--good); color: var(--surface); }
+#step-text { margin: 8px 0 0; font-size: 16.5px; max-width: 78ch; min-height: 3.2em; }
+
+.panel-label { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 8px; }
+.panel-label .hint { font-weight: 400; }
+
+/* The set drawn on a number line: sorted, with "…" wherever numbers are missing. */
+.line-scroll { overflow-x: auto; padding: 4px 6px 6px; }
+.nline { display: flex; align-items: flex-end; gap: 8px; width: max-content; min-height: 86px; }
+.item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.tags { min-height: 32px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; font: 600 11px/1.35 var(--font-mono); white-space: nowrap; }
+.t-num { color: var(--accent); }
+.t-probe { color: var(--probe); }
+.chip {
+  min-width: 54px; height: 46px; padding: 0 8px; box-sizing: border-box; border-radius: 10px;
+  display: grid; place-items: center;
+  font: 700 18px var(--font-mono); font-variant-numeric: tabular-nums;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  transition: background-color .2s, color .2s, border-color .2s;
+}
+.chip[data-state="run"] { background: var(--range); color: var(--range-ink); border-color: transparent; }
+.chip[data-state="best"] { background: var(--good-soft); color: var(--good-soft-ink); border-color: transparent; }
+.chip.ghost { background: transparent; color: var(--bad); border: 2px dashed var(--bad); }
+.chip.cur { outline: 2px solid var(--accent); outline-offset: 3px; }
+.chip.probe { outline: 2px solid var(--probe); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .chip { transition: none; } }
+.gap { height: 46px; display: grid; place-items: center; font: 700 18px var(--font-mono); color: var(--muted); padding: 0 2px; }
+.empty-note { color: var(--muted); font-size: 15px; margin: 0; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin-top: 8px; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; border: 1px solid var(--line); }
+.sw.cur { background: transparent; border: 2px solid var(--accent); }
+.sw.probe { background: transparent; border: 2px solid var(--probe); }
+.sw.run { background: var(--range); border-color: transparent; }
+.sw.best { background: var(--good-soft); border-color: transparent; }
+.sw.ghost { background: transparent; border: 2px dashed var(--bad); }
+
+/* Small rows: the original array and the order foreach visits the set in. */
+.mini-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.mini { min-width: 34px; height: 30px; padding: 0 6px; box-sizing: border-box; border-radius: 7px; display: grid; place-items: center; font: 600 14px var(--font-mono); border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.mini.dup { color: var(--muted); text-decoration: line-through; border-style: dashed; }
+.mini.done { color: var(--muted); background: var(--code-bg); }
+.mini.now { border-color: var(--accent); background: var(--range); color: var(--range-ink); }
+.rows { display: flex; flex-direction: column; gap: 10px; }
+.rows .lbl { font: 600 12px var(--font-mono); color: var(--muted); margin-bottom: 4px; }
+
+/* Variables | code */
+.board { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 28px; }
+@media (max-width: 880px) { .board { grid-template-columns: 1fr; } }
+.col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.vars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.var { border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; background: var(--bg); min-width: 0; }
+.var dt { font: 400 12px var(--font-mono); color: var(--muted); }
+.var dd { margin: 0; font: 600 18px var(--font-mono); font-variant-numeric: tabular-nums; }
+.var.changed { border-color: var(--accent); background: var(--range); }
+.var.changed dd { color: var(--range-ink); }
+.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 0; overflow-x: auto; font: 13px/1.6 var(--font-mono); }
+@media (max-width: 560px) { .code { font-size: 12px; } }
+.ln { display: block; padding: 0 14px 0 11px; white-space: pre; border-left: 3px solid transparent; }
+.ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
+.kw { color: var(--kw); }
+
+.why p { margin: 0 0 10px; max-width: 66ch; color: var(--muted); }
+.why p:last-child { margin-bottom: 0; }
+.why b { color: var(--ink); }
+.foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+.foot a { color: var(--accent); }
+
+/* No ligatures: `-` and `+` combos should look the way they are typed.
+   Kept last because the `font` shorthand above would reset it. */
+code, .code, .chip, .mini, .var dd, input[type="text"] { font-variant-ligatures: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">LeetCode 128 · Longest Consecutive Sequence · Medium</p>
+    <h1>En Uzun Ardışık Dizi</h1>
+    <p class="lead">Çözümün her adımını burada izleyebilirsin. Bir dizi seç, <b>İleri</b>'ye bas ya da <b>Oynat</b>'a tıkla; sadece grup başlarından saymanın, aynı grubu tekrar tekrar saymayı nasıl önlediğini gör.</p>
+  </header>
+
+  <section aria-labelledby="idea-h">
+    <h2 id="idea-h">Fikir üç adımda</h2>
+    <ol class="idea">
+      <li>
+        <span class="n">1</span>
+        <h3>Sayıları bir sete koy</h3>
+        <p><code>HashSet</code>, "bu sayı var mı?" sorusunu diziyi taramadan, anında cevaplar. Tekrar eden sayılar sete bir kez girer.</p>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <h3>Sadece grup başlarından say</h3>
+        <p>Bir sayının bir eksiği sette yoksa o sayı bir grubun başıdır. Başı olmayan sayıları atlıyoruz; böylece her grup bir kez sayılıyor.</p>
+      </li>
+      <li>
+        <span class="n">3</span>
+        <h3>Baştan ileri doğru say</h3>
+        <p>Grup başından itibaren bir fazlası, onun bir fazlası… sette olduğu sürece uzunluğu artır. En uzun grubu <code>longest</code>'ta tut.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="stepper" aria-labelledby="st-h">
+    <h2 id="st-h">Adım adım izle</h2>
+
+    <div class="controls">
+      <div class="row">
+        <div class="field">
+          <label for="list">Dizi (virgülle ayır, en fazla 10 sayı)</label>
+          <input id="list" type="text" value="100, 4, 200, 1, 3, 2" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="nav">
+          <button type="button" id="reset">Baştan</button>
+          <button type="button" id="prev-btn">← Geri</button>
+          <button type="button" id="next-btn" class="primary">İleri →</button>
+          <button type="button" id="play">▶ Oynat</button>
+        </div>
+      </div>
+      <div class="presets" role="group" aria-label="Hazır örnekler">
+        <button type="button" data-l="100, 4, 200, 1, 3, 2"><span class="mono">[100,4,200,1,3,2]</span></button>
+        <button type="button" data-l="0, 3, 7, 2, 5, 8, 4, 6, 0, 1"><span class="mono">[0,3,7,2,5,8,4,6,0,1]</span></button>
+        <button type="button" data-l="1, 0, 1, 2"><span class="mono">[1,0,1,2]</span>tekrar eden sayı</button>
+        <button type="button" data-l=""><span class="mono">[]</span>boş dizi</button>
+      </div>
+      <p class="err" id="list-err" hidden>Virgülle ayrılmış en fazla 10 tam sayı yaz (örneğin 4, 1, 3, 2). Sayılar -999 ile 999 arasında olmalı. Boş bırakırsan dizi boş olur.</p>
+    </div>
+
+    <div class="step" aria-live="polite">
+      <div class="step-meta"><span id="step-count"></span><span id="step-tag" class="tag"></span></div>
+      <p id="step-text"></p>
+    </div>
+
+    <div class="rows">
+      <div><div class="lbl">nums (tekrar edenler sete girmez)</div><div class="mini-row" id="nums-row"></div></div>
+      <div><div class="lbl">foreach sırası (set, sayıların eklendiği sırayla)</div><div class="mini-row" id="order-row"></div></div>
+    </div>
+
+    <div>
+      <p class="panel-label">Set, sayı doğrusunda <span class="hint">(küçükten büyüğe; "…" arada eksik sayı olduğunu gösterir)</span></p>
+      <div class="line-scroll"><div class="nline" id="nline"></div></div>
+      <div class="legend">
+        <span><i class="sw cur"></i>num (bakılan sayı)</span>
+        <span><i class="sw probe"></i>sette var mı diye bakılan sayı</span>
+        <span><i class="sw ghost"></i>sette yok</span>
+        <span><i class="sw run"></i>şu an sayılan grup</span>
+        <span><i class="sw best"></i>şimdiye kadarki en uzun grup</span>
+      </div>
+    </div>
+
+    <div class="board">
+      <div class="col">
+        <p class="panel-label">Değişkenler</p>
+        <dl class="vars" id="vars"></dl>
+      </div>
+      <div class="col">
+        <p class="panel-label">Kod (Solution.cs içindeki metot)</p>
+        <div class="code" id="code" role="region" aria-label="C# kodu" tabindex="0"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-h">
+    <h2 id="why-h">Neden O(n)?</h2>
+    <p>Kodda bir <code>foreach</code> ve içinde bir <code>while</code> var; ilk bakışta O(n²) gibi görünüyor. Ama <code>while</code> sadece grup başlarında çalışıyor ve her sayı en fazla bir grubun içinde sayılıyor. Toplamda her sayıya <code>foreach</code>'te bir kez, <code>while</code>'da en fazla bir kez bakılıyor: <b>O(n) zaman</b>. Set n sayı tuttuğu için <b>O(n) bellek</b> kullanıyor.</p>
+    <p>Grup başı kontrolü olmasaydı her sayıdan ileri doğru sayardık. 0'dan 99.999'a kadar bütün sayıların olduğu bir dizide 0'dan 100.000, 1'den 99.999 adım… toplam yaklaşık 5 milyar adım ederdi.</p>
+    <p><code>foreach</code>'in <code>nums</code> yerine <code>set</code> üzerinde dönmesi de önemli. Bir grubun başı dizide çok kez tekrar ediyorsa (örneğin 50.000 tane 1), <code>nums</code> üzerinde dönmek aynı grubu 50.000 kez sayar. Set'te her sayı bir kez olduğu için bu sorun olmuyor.</p>
+    <p>Diziyi sıralayıp baştan sona yürümek de doğru sonuç verir ve kodu daha kısadır. Ama sıralama <b>O(n log n)</b> sürer ve metoda verilen diziyi değiştirir. Set'li çözüm daha hızlı ve girdiye dokunmuyor.</p>
+  </section>
+
+  <footer class="foot">
+    <a href="https://leetcode.com/problems/longest-consecutive-sequence/">Soru: LeetCode 128</a>
+    <a href="https://github.com/physerkm/leetcode-solutions/blob/main/src/LeetCode/Problems/P0128_LongestConsecutiveSequence/Solution.cs">Kod: Solution.cs</a>
+    <a href="../">Tüm anlatımlar</a>
+    <a href="https://github.com/physerkm/leetcode-solutions">Repo: physerkm/leetcode-solutions</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const MAX_LEN = 10;
+
+  // Steps: mirrors Solution.cs line by line.
+  // set keeps first-seen order, the order a .NET HashSet<int> built from nums enumerates in.
+  // probe: the number checked with set.Contains on this step ({ value, found, kind: 'prev' | 'next' }).
+  function buildSteps(vals) {
+    const set = [];
+    vals.forEach((v) => { if (!set.includes(v)) set.push(v); });
+    const has = (v) => set.includes(v);
+    const steps = [];
+    let longest = 0;
+    let num;
+    let length;
+    let run = [];
+    let best = [];
+    let visited = -1;
+    const snap = (s) => steps.push({
+      set, num, length, longest, run: run.slice(), best: best.slice(), visited,
+      probe: null, newBest: false, changed: [], ...s,
+    });
+
+    const dupCount = vals.length - set.length;
+    snap({
+      kind: 'start', lines: ['set', 'longest'], changed: ['longest'],
+      text: vals.length === 0
+        ? 'Dizi boş, set de boş. <code>longest = 0</code>.'
+        : `Bütün sayılar <code>HashSet</code>'e konuyor` +
+          (dupCount > 0 ? `; tekrar eden ${dupCount} sayı sete ikinci kez girmiyor` : '') +
+          `. Set: <code>{${set.join(', ')}}</code>. <code>longest = 0</code>.`,
+    });
+
+    for (let k = 0; k < set.length; k++) {
+      visited = k;
+      num = set[k];
+      length = undefined;
+      run = [];
+
+      if (has(num - 1)) {
+        snap({
+          kind: 'skip', lines: ['foreach', 'if', 'continue'], changed: ['num'],
+          probe: { value: num - 1, found: true, kind: 'prev' },
+          text: `<code>num = ${num}</code>. ${num - 1} sette var mı? <b>Var.</b> O zaman ${num} bir grubun başı değil; bu grubu, başına gelince sayacağız. <code>continue</code> ile atlıyoruz.`,
+        });
+        continue;
+      }
+
+      length = 1;
+      run = [num];
+      snap({
+        kind: 'begin', lines: ['foreach', 'if', 'length'], changed: ['num', 'length'],
+        probe: { value: num - 1, found: false, kind: 'prev' },
+        text: `<code>num = ${num}</code>. ${num - 1} sette var mı? <b>Yok.</b> Demek ki ${num} bir grubun başı. <code>length = 1</code> ile saymaya başlıyoruz.`,
+      });
+
+      while (has(num + length)) {
+        const v = num + length;
+        length++;
+        run = [...run, v];
+        snap({
+          kind: 'grow', lines: ['while', 'inc'], changed: ['length'],
+          probe: { value: v, found: true, kind: 'next' },
+          text: `${v} sette var mı? <b>Var.</b> Grup devam ediyor: <code>length++</code> → ${length}.`,
+        });
+      }
+
+      const missing = num + length;
+      const old = longest;
+      longest = Math.max(longest, length);
+      const isNewBest = length > old;
+      if (isNewBest) best = run.slice();
+      snap({
+        kind: 'stop', lines: ['while', 'max'], changed: isNewBest ? ['longest'] : [], newBest: isNewBest,
+        probe: { value: missing, found: false, kind: 'next' },
+        text: `${missing} sette var mı? <b>Yok.</b> Grup bitti: ${run.join(', ')} → uzunluk ${length}. ` +
+          `<code>longest = Math.Max(${old}, ${length})</code> → ${longest}.` +
+          (isNewBest ? ' Şimdiye kadarki en uzun grup bu.' : ''),
+      });
+    }
+
+    visited = set.length;
+    num = undefined;
+    length = undefined;
+    run = [];
+    snap({
+      kind: 'done', lines: ['ret'],
+      text: set.length === 0
+        ? 'Set boş olduğu için döngü hiç çalışmadı. <code>return longest</code> → 0.'
+        : `Setteki her sayıya bakıldı. <code>return longest</code> → ${longest}. En uzun grup: ${best.join(', ')}.`,
+    });
+    return steps;
+  }
+
+  // Rendering
+  const CODE = [
+    ['set', 'HashSet&lt;<span class="kw">int</span>&gt; set = <span class="kw">new</span> HashSet&lt;<span class="kw">int</span>&gt;(nums);'],
+    ['longest', '<span class="kw">int</span> longest = 0;'],
+    ['', ''],
+    ['foreach', '<span class="kw">foreach</span> (<span class="kw">int</span> num <span class="kw">in</span> set)'],
+    ['', '{'],
+    ['if', '    <span class="kw">if</span> (set.Contains(num - 1))'],
+    ['continue', '        <span class="kw">continue</span>;'],
+    ['', ''],
+    ['length', '    <span class="kw">int</span> length = 1;'],
+    ['while', '    <span class="kw">while</span> (set.Contains(num + length))'],
+    ['inc', '        length++;'],
+    ['', ''],
+    ['max', '    longest = Math.Max(longest, length);'],
+    ['', '}'],
+    ['', ''],
+    ['ret', '<span class="kw">return</span> longest;'],
+  ];
+  $('code').innerHTML = CODE.map(([id, html]) => `<span class="ln"${id ? ` data-id="${id}"` : ''}>${html || ' '}</span>`).join('');
+  const codeLines = {};
+  document.querySelectorAll('.ln[data-id]').forEach((el) => { codeLines[el.dataset.id] = el; });
+
+  const TAGS = {
+    start: ['Başlangıç', ''], skip: ['Grup başı değil', 'skip'], begin: ['Grup başı', ''],
+    grow: ['Say', ''], stop: ['Grup bitti', ''], done: ['Bitti', 'ok'],
+  };
+
+  let listText = '100, 4, 200, 1, 3, 2';
+  let vals = [];
+  let steps = [];
+  let idx = 0;
+  let timer = null;
+
+  function parse(raw) {
+    const parts = raw.split(/[\s,]+/).filter(Boolean);
+    if (parts.length > MAX_LEN) return null;
+    const out = parts.map(Number);
+    return out.every((v) => Number.isInteger(v) && v >= -999 && v <= 999) ? out : null;
+  }
+
+  function renderLine(st) {
+    if (st.set.length === 0) return '<p class="empty-note">Set boş.</p>';
+    // Sorted set, plus a dashed "ghost" for a probed number that is missing.
+    const items = st.set.slice().sort((a, b) => a - b).map((v) => ({ v, ghost: false }));
+    if (st.probe && !st.probe.found) {
+      items.push({ v: st.probe.value, ghost: true });
+      items.sort((a, b) => a.v - b.v);
+    }
+    let html = '';
+    items.forEach((it, k) => {
+      if (k > 0 && it.v - items[k - 1].v > 1) html += '<div class="item"><div class="tags"></div><div class="gap" aria-hidden="true">…</div></div>';
+      const tags = [];
+      if (it.v === st.num && !it.ghost) tags.push('<span class="t-num">num</span>');
+      const isProbe = st.probe && st.probe.value === it.v;
+      if (isProbe) tags.push(`<span class="t-probe">${st.probe.kind === 'prev' ? 'num - 1' : 'num + length'} ${st.probe.found ? '✓' : '✗'}</span>`);
+      let cls = 'chip';
+      let state = 'plain';
+      if (it.ghost) cls += ' ghost';
+      else {
+        if (st.run.includes(it.v)) state = st.kind === 'stop' && st.newBest ? 'best' : 'run';
+        else if (st.best.includes(it.v)) state = 'best';
+        if (isProbe) cls += ' probe';
+        else if (it.v === st.num) cls += ' cur';
+      }
+      html += `<div class="item"><div class="tags">${tags.join('')}</div><div class="${cls}" data-state="${state}">${it.v}</div></div>`;
+    });
+    return html;
+  }
+
+  function render() {
+    const st = steps[idx];
+
+    const seen = [];
+    $('nums-row').innerHTML = vals.length === 0
+      ? '<span class="empty-note">boş</span>'
+      : vals.map((v) => {
+        const dup = seen.includes(v);
+        seen.push(v);
+        return `<span class="mini${dup ? ' dup' : ''}">${v}</span>`;
+      }).join('');
+    $('order-row').innerHTML = st.set.length === 0
+      ? '<span class="empty-note">boş</span>'
+      : st.set.map((v, k) => `<span class="mini${k === st.visited ? ' now' : k < st.visited ? ' done' : ''}">${v}</span>`).join('');
+
+    $('nline').innerHTML = renderLine(st);
+
+    const vars = [['num', st.num], ['length', st.length], ['longest', st.longest]];
+    $('vars').innerHTML = vars.map(([name, v]) =>
+      `<div class="var${st.changed.includes(name) ? ' changed' : ''}"><dt>${name}</dt><dd>${v === undefined ? '—' : v}</dd></div>`).join('');
+
+    Object.keys(codeLines).forEach((id) => codeLines[id].classList.toggle('hl', st.lines.includes(id)));
+
+    const [tagText, tagKind] = TAGS[st.kind];
+    $('step-count').textContent = `Adım ${idx + 1} / ${steps.length}`;
+    $('step-tag').textContent = tagText;
+    $('step-tag').dataset.kind = tagKind;
+    $('step-text').innerHTML = st.text;
+    $('prev-btn').disabled = idx === 0;
+    $('reset').disabled = idx === 0;
+    $('next-btn').disabled = idx === steps.length - 1;
+
+    document.querySelectorAll('.presets button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.l === listText)));
+  }
+
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    $('play').textContent = '▶ Oynat';
+  }
+
+  function restart(text, parsed) {
+    stop();
+    listText = text;
+    vals = parsed;
+    steps = buildSteps(vals);
+    idx = 0;
+    render();
+  }
+
+  $('next-btn').addEventListener('click', () => { stop(); if (idx < steps.length - 1) { idx++; render(); } });
+  $('prev-btn').addEventListener('click', () => { stop(); if (idx > 0) { idx--; render(); } });
+  $('reset').addEventListener('click', () => { stop(); idx = 0; render(); });
+  $('play').addEventListener('click', () => {
+    if (timer) { stop(); return; }
+    if (idx === steps.length - 1) { idx = 0; render(); }
+    $('play').textContent = '❚❚ Durdur';
+    timer = setInterval(() => {
+      if (idx < steps.length - 1) { idx++; render(); }
+      if (idx === steps.length - 1) stop();
+    }, 1100);
+  });
+  document.querySelectorAll('.presets button').forEach((b) => b.addEventListener('click', () => {
+    $('list').value = b.dataset.l;
+    $('list-err').hidden = true;
+    restart(b.dataset.l, parse(b.dataset.l));
+  }));
+  $('list').addEventListener('input', (e) => {
+    const parsed = parse(e.target.value);
+    if (!parsed) { $('list-err').hidden = false; return; }
+    $('list-err').hidden = true;
+    restart(e.target.value, parsed);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next-btn').click();
+    else if (e.key === 'ArrowLeft') $('prev-btn').click();
+  });
+
+  restart(listText, parse(listText));
+})();
+</script>
+</body>
+</html>
