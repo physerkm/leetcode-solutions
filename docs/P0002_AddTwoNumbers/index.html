@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bağlı Listelerle Toplama</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: one reading column; the stepper is a single tool panel (controls, step card, the lists in columns, then number + variables | code) that stacks on phones. */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --ink: #141b26;
+  --muted: #5a6779;
+  --line: #d6dce6;
+  --accent: #3346c8;
+  --accent-ink: #ffffff;
+  --range: #e3e9fb;
+  --range-ink: #1d2a6b;
+  --probe: #c46f00;
+  --good: #17824a;
+  --good-soft: #dcf1e4;
+  --good-soft-ink: #145c36;
+  --bad: #b8402a;
+  --code-bg: #f7f8fb;
+  --code-hl: #dfe5fb;
+  --kw: #7a3aa8;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+    --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff; --probe: #e6a23c;
+    --good: #3fbf7a; --good-soft: #14301f; --good-soft-ink: #8fe0b2; --bad: #ff7d66;
+    --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+  --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff; --probe: #e6a23c;
+  --good: #3fbf7a; --good-soft: #14301f; --good-soft-ink: #8fe0b2; --bad: #ff7d66;
+  --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0;
+  color-scheme: dark;
+}
+
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
+.wrap {
+  max-width: 1040px; margin: 0 auto;
+  padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px;
+}
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--muted); margin: 0; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 6vw, 54px); line-height: 1.05; letter-spacing: -.02em; margin: 8px 0 14px; text-wrap: balance; }
+.lead { max-width: 62ch; color: var(--muted); margin: 0; font-size: 17px; }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -.01em; margin: 0 0 18px; text-wrap: balance; }
+code { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+
+/* Idea */
+.idea { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; list-style: none; padding: 0; margin: 0; }
+.idea li { border-top: 2px solid var(--ink); padding-top: 12px; min-width: 0; }
+.idea .n { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.idea h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 2px 0 6px; text-wrap: balance; }
+.idea p { margin: 0; color: var(--muted); font-size: 15px; }
+@media (max-width: 760px) { .idea { grid-template-columns: 1fr; gap: 20px; } }
+
+/* Stepper panel */
+.stepper { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+@media (max-width: 560px) { .stepper { padding: 16px; } }
+.stepper h2 { margin: 0; }
+.controls { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+.fields { display: flex; flex-wrap: wrap; gap: 12px 16px; }
+.field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+input[type="text"] { width: 13em; max-width: 100%; box-sizing: border-box; font: 600 17px var(--font-mono); padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.err { margin: 0; font-size: 13px; color: var(--bad); max-width: 78ch; }
+button { font: 500 14px var(--font-body); padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .4; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.presets button { font-size: 13px; padding: 7px 10px; }
+.presets .mono { font-family: var(--font-mono); font-weight: 700; margin-right: 6px; }
+.presets button[aria-pressed="true"] { border-color: var(--accent); background: var(--range); color: var(--range-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav { display: flex; flex-wrap: wrap; gap: 8px; }
+#play { min-width: 7.5em; }
+
+.step { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+.step-meta { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag { font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--range); color: var(--range-ink); }
+.tag[data-kind="ok"] { background: var(--good); color: var(--surface); }
+#step-text { margin: 8px 0 0; font-size: 16.5px; max-width: 78ch; min-height: 3.2em; }
+
+.panel-label { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 8px; }
+.panel-label .hint { font-weight: 400; }
+
+/* The lists in columns: one column per digit position, the ones digit (the head of each list) on the left. */
+.lists-scroll { overflow-x: auto; padding: 4px 2px 6px; }
+.lists { display: flex; flex-direction: column; gap: 6px; width: max-content; }
+.lrow { display: flex; align-items: flex-end; }
+.rlabel { width: 56px; height: 44px; flex: none; display: flex; align-items: center; font: 600 12px var(--font-mono); color: var(--muted); }
+.lrow.carry .rlabel { height: 24px; }
+.slot { width: 46px; flex: none; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.arr { width: 24px; height: 44px; flex: none; display: grid; place-items: center; font: 700 17px var(--font-mono); color: var(--muted); }
+.lrow.carry .arr { height: 24px; }
+.chip {
+  width: 46px; height: 44px; box-sizing: border-box; border-radius: 10px;
+  display: grid; place-items: center;
+  font: 700 19px var(--font-mono); font-variant-numeric: tabular-nums;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  transition: background-color .2s, color .2s, border-color .2s;
+}
+.chip.used { color: var(--muted); }
+.chip.ghost { background: transparent; border: 2px dashed var(--line); color: var(--muted); }
+.chip.dummy { background: transparent; border: 2px dashed var(--line); color: var(--muted); font: 600 11px var(--font-mono); }
+.chip.probe { outline: 2px solid var(--probe); outline-offset: 3px; }
+.chip[data-state="new"] { background: var(--range); color: var(--range-ink); border-color: transparent; }
+.chip[data-state="final"] { background: var(--good-soft); color: var(--good-soft-ink); border-color: transparent; }
+.chip.blank { border-color: transparent; background: transparent; }
+@media (prefers-reduced-motion: reduce) { .chip { transition: none; } }
+.tagline { min-height: 30px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; font: 600 11px/1.35 var(--font-mono); color: var(--accent); white-space: nowrap; }
+.tagline .ret { color: var(--good); }
+.cin { width: 30px; height: 24px; border-radius: 6px; display: grid; place-items: center; font: 700 14px var(--font-mono); color: var(--muted); }
+.cin.one { color: var(--accent); }
+.cin.new { background: var(--range); color: var(--range-ink); }
+.bar { height: 0; border-top: 2px solid var(--ink); margin: 2px 0 2px 126px; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin-top: 8px; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; border: 1px solid var(--line); }
+.sw.probe { background: transparent; border: 2px solid var(--probe); }
+.sw.ghost { background: transparent; border: 2px dashed var(--muted); }
+.sw.new { background: var(--range); border-color: transparent; }
+.sw.final { background: var(--good-soft); border-color: transparent; }
+
+/* The same addition written the usual way: most significant digit on the left. */
+.sum-grid { display: inline-grid; gap: 2px; font: 700 22px/1.5 var(--font-mono); font-variant-numeric: tabular-nums; }
+.sum-grid span { text-align: center; border-radius: 5px; }
+.sum-grid .sign { color: var(--muted); }
+.sum-grid .rule { grid-column: 1 / -1; border-top: 2px solid var(--ink); border-radius: 0; height: 0; }
+.sum-grid .now { color: var(--probe); box-shadow: inset 0 -2px 0 var(--probe); }
+.sum-grid .new { background: var(--range); color: var(--range-ink); }
+.sum-grid .final { background: var(--good-soft); color: var(--good-soft-ink); }
+
+/* Number + variables | code */
+.board { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 28px; }
+@media (max-width: 880px) { .board { grid-template-columns: 1fr; } }
+.col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.vars-block { margin-top: 20px; }
+.vars { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.var { border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; background: var(--bg); min-width: 0; }
+.var dt { font: 400 12px var(--font-mono); color: var(--muted); }
+.var dd { margin: 0; font: 600 17px var(--font-mono); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.var.changed { border-color: var(--accent); background: var(--range); }
+.var.changed dd { color: var(--range-ink); }
+.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 0; overflow-x: auto; font: 13px/1.6 var(--font-mono); }
+@media (max-width: 560px) { .code { font-size: 12px; } }
+.ln { display: block; padding: 0 14px 0 11px; white-space: pre; border-left: 3px solid transparent; }
+.ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
+.kw { color: var(--kw); }
+
+/* Two columns keep lines short enough to read while still using the page width. */
+.why-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; }
+.why-grid > div { border-top: 1px solid var(--line); padding-top: 12px; min-width: 0; }
+.why h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 0 0 6px; text-wrap: balance; }
+.why p { margin: 0; color: var(--muted); }
+.why b { color: var(--ink); }
+@media (max-width: 760px) { .why-grid { grid-template-columns: 1fr; gap: 20px; } }
+.foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+.foot a { color: var(--accent); }
+
+/* No ligatures: `!=` and `->` combos should look the way they are typed.
+   Kept last because the `font` shorthand above would reset it. */
+code, .code, .chip, .cin, .sum-grid, .var dd, input[type="text"] { font-variant-ligatures: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">LeetCode 2 · Add Two Numbers · Medium</p>
+    <h1>Bağlı Listelerle Toplama</h1>
+    <p class="lead">Çözümün her adımını burada izleyebilirsin. İki liste seç, <b>İleri</b>'ye bas ya da <b>Oynat</b>'a tıkla; rakamları ters sırada tutmanın, ilkokuldaki alt alta toplamayı nasıl kolaylaştırdığını gör.</p>
+  </header>
+
+  <section aria-labelledby="idea-h">
+    <h2 id="idea-h">Fikir üç adımda</h2>
+    <ol class="idea">
+      <li>
+        <span class="n">1</span>
+        <h3>Ters sıra bir kolaylık</h3>
+        <p>Listenin başında birler basamağı var. Alt alta toplamada da birler basamağından başlarız; yani iki listeyi baştan sona gezmek, sağdan sola toplamakla aynı şey.</p>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <h3>Basamak basamak topla</h3>
+        <p>Her turda iki rakamı ve eldeyi topla. <code>sum % 10</code> sonuca yazılır, <code>sum / 10</code> bir sonraki basamağa elde olarak geçer. Biten liste 0 sayılır.</p>
+      </li>
+      <li>
+        <span class="n">3</span>
+        <h3>Sonucu dummy'nin arkasına kur</h3>
+        <p>Boş bir <code>dummy</code> düğümü ve son düğümü gösteren <code>tail</code> ile her rakamı listenin sonuna ekle. Listeler bitip elde de kalmayınca <code>dummy.next</code>'i döndür.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="stepper" aria-labelledby="st-h">
+    <h2 id="st-h">Adım adım izle</h2>
+
+    <div class="controls">
+      <div class="row">
+        <div class="fields">
+          <div class="field">
+            <label for="in-a">l1 (virgülle ayır, en fazla 10 rakam)</label>
+            <input id="in-a" type="text" value="2, 4, 3" autocomplete="off" spellcheck="false">
+          </div>
+          <div class="field">
+            <label for="in-b">l2 (virgülle ayır, en fazla 10 rakam)</label>
+            <input id="in-b" type="text" value="5, 6, 4" autocomplete="off" spellcheck="false">
+          </div>
+        </div>
+        <div class="nav">
+          <button type="button" id="reset">Baştan</button>
+          <button type="button" id="prev-btn">← Geri</button>
+          <button type="button" id="next-btn" class="primary">İleri →</button>
+          <button type="button" id="play">▶ Oynat</button>
+        </div>
+      </div>
+      <div class="presets" role="group" aria-label="Hazır örnekler">
+        <button type="button" data-a="2, 4, 3" data-b="5, 6, 4"><span class="mono">342 + 465</span>LeetCode örneği</button>
+        <button type="button" data-a="5" data-b="5"><span class="mono">5 + 5</span>son elde yeni basamak olur</button>
+        <button type="button" data-a="1" data-b="9, 9, 9"><span class="mono">1 + 999</span>elde uzun listede ilerler</button>
+        <button type="button" data-a="9, 9, 9, 9, 9, 9, 9" data-b="9, 9, 9, 9"><span class="mono">9999999 + 9999</span>farklı uzunluk</button>
+      </div>
+      <p class="err" id="in-err" hidden>Her liste için virgülle ayrılmış 1 ile 10 arasında rakam (0–9) yaz, birler basamağı önce. Sayılar 0 ile başlamadığı için listenin son rakamı 0 olamaz; sadece 0 sayısının kendisi, yani <code>0</code> yazılabilir.</p>
+    </div>
+
+    <div class="step" aria-live="polite">
+      <div class="step-meta"><span id="step-count"></span><span id="step-tag" class="tag"></span></div>
+      <p id="step-text"></p>
+    </div>
+
+    <div>
+      <p class="panel-label">Listeler, alt alta <span class="hint">(her sütun bir basamak; listelerin başı, yani birler basamağı solda)</span></p>
+      <div class="lists-scroll"><div class="lists" id="lists"></div></div>
+      <div class="legend">
+        <span><i class="sw probe"></i>bu turda okunan rakam</span>
+        <span><i class="sw ghost"></i>liste bitti, bir şey eklemiyor (0 gibi)</span>
+        <span><i class="sw new"></i>bu adımda eklenen düğüm</span>
+        <span><i class="sw final"></i>sonuç</span>
+      </div>
+    </div>
+
+    <div class="board">
+      <div class="col">
+        <p class="panel-label">Sayı olarak <span class="hint">(alışık olduğumuz yazım: birler basamağı sağda)</span></p>
+        <div><div class="sum-grid" id="sum-grid" aria-label="Toplama işleminin sayı olarak yazılışı"></div></div>
+        <div class="vars-block">
+          <p class="panel-label">Değişkenler <span class="hint">(l1 ve l2: gösterdikleri düğümden itibaren listenin kalanı)</span></p>
+          <dl class="vars" id="vars"></dl>
+        </div>
+      </div>
+      <div class="col">
+        <p class="panel-label">Kod (Solution.cs içindeki metot, yorum satırları olmadan)</p>
+        <div class="code" id="code" role="region" aria-label="C# kodu" tabindex="0"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-h">
+    <h2 id="why-h">Neden bu kadar verimli?</h2>
+    <div class="why-grid">
+      <div>
+        <h3>O(max(m, n)) zaman</h3>
+        <p>Her turda iki listeden birer düğüm ilerliyoruz. Tur sayısı uzun listenin boyu kadar, son elde varsa bir fazlası. Listelerin uzunlukları m ve n ise: <b>O(max(m, n)) zaman</b>.</p>
+      </div>
+      <div>
+        <h3>O(1) ekstra bellek</h3>
+        <p>Sonuç listesi dışında sadece <code>carry</code>, <code>sum</code> ve <code>tail</code> gibi birkaç değişken var. Döndürülen liste cevabın kendisi olduğu için hesaba katılmıyor: <b>O(1) ekstra bellek</b>. Girdi listelerinin düğümlerine de dokunulmuyor.</p>
+      </div>
+      <div>
+        <h3>Sayıya çevirmek neden olmaz?</h3>
+        <p>Listeleri <code>long</code>'a çevirip toplamak, sonucu da listeye geri çevirmek ilk akla gelen yol. Ama listeler 100 rakamlı olabiliyor, <code>long</code> ise en fazla 19 basamak tutabiliyor; sayı taşar. Basamak basamak toplamak, sayı ne kadar uzun olursa olsun çalışır.</p>
+      </div>
+      <div>
+        <h3>dummy neden var?</h3>
+        <p><code>dummy</code> olmasaydı ilk rakam için ayrı bir kod gerekirdi, çünkü sonuç listesi boşken arkasına düğüm takılacak bir yer yoktur. Başa sahte bir düğüm koyunca her rakam aynı iki satırla eklenir; sonunda <code>dummy.next</code> ile asıl liste döndürülür.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <a href="https://leetcode.com/problems/add-two-numbers/">Soru: LeetCode 2</a>
+    <a href="https://github.com/physerkm/leetcode-solutions/blob/main/src/LeetCode/Problems/P0002_AddTwoNumbers/Solution.cs">Kod: Solution.cs</a>
+    <a href="../">Tüm anlatımlar</a>
+    <a href="https://github.com/physerkm/leetcode-solutions">Repo: physerkm/leetcode-solutions</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const MAX_DIGITS = 10;
+  const PLACES = ['Birler', 'Onlar', 'Yüzler', 'Binler', 'On binler', 'Yüz binler', 'Milyonlar', 'On milyonlar', 'Yüz milyonlar', 'Milyarlar', 'On milyarlar'];
+
+  // Steps: mirrors Solution.cs line by line.
+  // a and b are the digits of l1 and l2 from head to tail (ones digit first).
+  // p1 and p2 are the positions l1 and l2 point at; a position past the end means null.
+  // calc is shared by every step: the digits written and the carry that went into each column.
+  function buildSteps(a, b) {
+    const steps = [];
+    const calc = { a, b, digits: [], carryIn: [], n: 0 };
+    let carry = 0;
+    let sum;
+    let col = -1;
+    let p1 = 0;
+    let p2 = 0;
+    const snap = (s) => steps.push({ calc, col, carry, sum, p1, p2, resLen: calc.digits.length, changed: [], ...s });
+
+    snap({
+      kind: 'start', lines: ['dummy', 'tail', 'carry0'], changed: ['carry'],
+      text: 'Sonuç listesi için boş bir <code>dummy</code> düğümü oluşturuluyor; rakamlar onun arkasına eklenecek. <code>tail</code> şimdilik <code>dummy</code>\'yi gösteriyor, <code>carry = 0</code>.',
+    });
+
+    while (p1 < a.length || p2 < b.length || carry !== 0) {
+      col++;
+      calc.carryIn[col] = carry;
+      sum = carry;
+      const lines = ['while', 'sum', 'if1'];
+      const changed = ['sum'];
+      const x = p1 < a.length ? a[p1] : null;
+      if (x !== null) { sum += x; p1++; lines.push('add1', 'next1'); changed.push('l1'); }
+      lines.push('if2');
+      const y = p2 < b.length ? b[p2] : null;
+      if (y !== null) { sum += y; p2++; lines.push('add2', 'next2'); changed.push('l2'); }
+
+      let read;
+      if (x !== null && y !== null) read = `l1'den ${x}, l2'den ${y} okunuyor, elde ${carry}: <code>sum = ${carry} + ${x} + ${y} = ${sum}</code>. İki liste de bir sonraki düğüme kayıyor.`;
+      else if (x !== null) read = `l2 bitti, bir şey eklemiyor. Sadece l1'den ${x} okunuyor, elde ${carry}: <code>sum = ${carry} + ${x} = ${sum}</code>. l1 bir sonraki düğüme kayıyor.`;
+      else if (y !== null) read = `l1 bitti, bir şey eklemiyor. Sadece l2'den ${y} okunuyor, elde ${carry}: <code>sum = ${carry} + ${y} = ${sum}</code>. l2 bir sonraki düğüme kayıyor.`;
+      else read = `İki liste de bitti ama elde ${carry} var; döngü bu yüzden bir tur daha dönüyor: <code>sum = ${carry}</code>.`;
+      snap({ kind: 'read', lines, changed, text: `<b>${PLACES[col]} basamağı.</b> ${read}` });
+
+      calc.digits.push(sum % 10);
+      carry = Math.floor(sum / 10);
+      snap({
+        kind: 'write', lines: ['write', 'move', 'carry'], changed: ['carry'],
+        text: `<code>${sum} % 10 = ${sum % 10}</code> yeni düğüm olarak sonucun sonuna ekleniyor, <code>tail</code> ona kayıyor. <code>${sum} / 10 = ${carry}</code>: ` +
+          (carry ? '<b>elde 1</b>, bir sonraki basamağa geçiyor.' : 'elde yok.'),
+      });
+    }
+
+    calc.n = calc.digits.length;
+    col = calc.n;
+    sum = undefined;
+    const asNumber = (digits) => digits.slice().reverse().join('');
+    snap({
+      kind: 'done', lines: ['while', 'ret'],
+      text: 'l1 ve l2 bitti, elde de 0: döngünün koşulu artık sağlanmıyor. ' +
+        `<code>return dummy.next</code> → <code>[${calc.digits.join(',')}]</code>. ` +
+        `Sayı olarak: ${asNumber(a)} + ${asNumber(b)} = ${asNumber(calc.digits)}.`,
+    });
+    return steps;
+  }
+
+  // Rendering
+  const K = (word) => `<span class="kw">${word}</span>`;
+  const CODE = [
+    ['dummy', `ListNode dummy = ${K('new')} ListNode();`],
+    ['tail', 'ListNode tail = dummy;'],
+    ['carry0', `${K('int')} carry = 0;`],
+    ['', ''],
+    ['while', `${K('while')} (l1 != ${K('null')} || l2 != ${K('null')} || carry != 0)`],
+    ['', '{'],
+    ['sum', `    ${K('int')} sum = carry;`],
+    ['if1', `    ${K('if')} (l1 != ${K('null')})`],
+    ['', '    {'],
+    ['add1', '        sum += l1.val;'],
+    ['next1', '        l1 = l1.next;'],
+    ['', '    }'],
+    ['if2', `    ${K('if')} (l2 != ${K('null')})`],
+    ['', '    {'],
+    ['add2', '        sum += l2.val;'],
+    ['next2', '        l2 = l2.next;'],
+    ['', '    }'],
+    ['write', `    tail.next = ${K('new')} ListNode(sum % 10);`],
+    ['move', '    tail = tail.next;'],
+    ['carry', '    carry = sum / 10;'],
+    ['', '}'],
+    ['', ''],
+    ['ret', `${K('return')} dummy.next;`],
+  ];
+  $('code').innerHTML = CODE.map(([id, html]) => `<span class="ln"${id ? ` data-id="${id}"` : ''}>${html || ' '}</span>`).join('');
+  const codeLines = {};
+  document.querySelectorAll('.ln[data-id]').forEach((el) => { codeLines[el.dataset.id] = el; });
+
+  const TAGS = { start: ['Başlangıç', ''], read: ['Topla', ''], write: ['Yaz', ''], done: ['Bitti', 'ok'] };
+
+  let aText = '2, 4, 3';
+  let bText = '5, 6, 4';
+  let steps = [];
+  let idx = 0;
+  let timer = null;
+
+  // Returns the digits, or null when the text is not a valid LeetCode list.
+  function parse(raw) {
+    const parts = raw.split(/[\s,]+/).filter(Boolean);
+    if (parts.length === 0 || parts.length > MAX_DIGITS) return null;
+    if (!parts.every((p) => /^\d$/.test(p))) return null;
+    const digits = parts.map(Number);
+    if (digits.length > 1 && digits[digits.length - 1] === 0) return null; // no leading zero
+    return digits;
+  }
+
+  // Is column k already reached on this step (or the whole sum finished)?
+  const reached = (st, k) => (st.kind === 'done' ? k < st.calc.n : k <= st.col && st.col >= 0);
+  const active = (st, k) => (st.kind === 'read' || st.kind === 'write') && k === st.col;
+
+  function listRow(st, label, digits) {
+    let html = `<div class="lrow"><span class="rlabel">${label}</span><div class="slot"><span class="chip blank"></span></div><div class="arr"></div>`;
+    for (let k = 0; k < st.calc.n; k++) {
+      let cls = 'chip';
+      let text = '';
+      if (k < digits.length) {
+        text = digits[k];
+        if (active(st, k)) cls += ' probe';
+        else if (reached(st, k)) cls += ' used';
+      } else if (reached(st, k)) {
+        cls += ' ghost';
+        text = '0';
+      } else {
+        cls += ' blank';
+      }
+      html += `<div class="slot"><span class="${cls}">${text}</span></div>`;
+      if (k < st.calc.n - 1) html += `<div class="arr">${k + 1 < digits.length ? '→' : ''}</div>`;
+    }
+    return html + '</div>';
+  }
+
+  function renderLists(st) {
+    const { n, carryIn, digits } = st.calc;
+
+    // Carry row: the carry that goes into each column, like the small 1 written above a column on paper.
+    let carryRow = '<div class="lrow carry"><span class="rlabel">elde</span><div class="slot"></div><div class="arr"></div>';
+    for (let k = 0; k < n; k++) {
+      let cell = '';
+      const fresh = st.kind === 'write' && k === st.col + 1;
+      if (reached(st, k) || fresh) {
+        const v = carryIn[k];
+        cell = `<span class="cin${v ? ' one' : ''}${fresh ? ' new' : ''}">${v}</span>`;
+      }
+      carryRow += `<div class="slot">${cell}</div>`;
+      if (k < n - 1) carryRow += '<div class="arr"></div>';
+    }
+    carryRow += '</div>';
+
+    // Result row: dummy, then the digits written so far; tail points at the last node.
+    const tailAt = st.resLen - 1; // -1 means tail is still on dummy
+    const tags = (k) => {
+      const t = [];
+      if (st.kind === 'done' && k === 0) t.push('<span class="ret">dummy.next</span>');
+      if (k === tailAt) t.push('<span>tail</span>');
+      return `<div class="tagline">${t.join('')}</div>`;
+    };
+    let result = `<div class="lrow"><span class="rlabel">sonuç</span><div class="slot">${tags(-1)}<span class="chip dummy">dummy</span></div>` +
+      `<div class="arr">${st.resLen > 0 ? '→' : ''}</div>`;
+    for (let k = 0; k < n; k++) {
+      let chip = '<span class="chip blank"></span>';
+      if (k < st.resLen) {
+        const state = st.kind === 'done' ? 'final' : st.kind === 'write' && k === st.col ? 'new' : 'plain';
+        chip = `<span class="chip" data-state="${state}">${digits[k]}</span>`;
+      }
+      result += `<div class="slot">${tags(k)}${chip}</div>`;
+      if (k < n - 1) result += `<div class="arr">${k + 1 < st.resLen ? '→' : ''}</div>`;
+    }
+    result += '</div>';
+
+    const barWidth = n * 70 - 24;
+    return carryRow + listRow(st, 'l1', st.calc.a) + listRow(st, 'l2', st.calc.b) +
+      `<div class="bar" style="width:${barWidth}px"></div>` + result;
+  }
+
+  function renderSum(st) {
+    const { n, a, b, digits } = st.calc;
+    // Grid column for place k (0 = ones digit): the sign sits in column 1, the ones digit in the last column.
+    const numberRow = (row, sign, ds, known, stateOf) => {
+      let html = `<span class="sign" style="grid-row:${row};grid-column:1">${sign}</span>`;
+      for (let k = 0; k < known; k++) {
+        html += `<span class="${stateOf(k)}" style="grid-row:${row};grid-column:${n - k + 1}">${ds[k]}</span>`;
+      }
+      return html;
+    };
+    const inputState = (k) => (active(st, k) ? 'now' : '');
+    const resultState = (k) => (st.kind === 'done' ? 'final' : st.kind === 'write' && k === st.col ? 'new' : '');
+    $('sum-grid').style.gridTemplateColumns = `repeat(${n + 1}, 1.1em)`;
+    return numberRow(1, '', a, a.length, inputState) +
+      numberRow(2, '+', b, b.length, inputState) +
+      '<span class="rule" style="grid-row:3"></span>' +
+      numberRow(4, '', digits, st.resLen, resultState);
+  }
+
+  function restOf(digits, p) {
+    if (p >= digits.length) return 'null';
+    const rest = digits.slice(p);
+    return rest.length > 3 ? `${rest.slice(0, 3).join(' → ')} → …` : rest.join(' → ');
+  }
+
+  function render() {
+    const st = steps[idx];
+
+    $('lists').innerHTML = renderLists(st);
+    $('sum-grid').innerHTML = renderSum(st);
+
+    const vars = [['l1', restOf(st.calc.a, st.p1)], ['l2', restOf(st.calc.b, st.p2)], ['sum', st.sum], ['carry', st.carry]];
+    $('vars').innerHTML = vars.map(([name, v]) =>
+      `<div class="var${st.changed.includes(name) ? ' changed' : ''}"><dt>${name}</dt><dd>${v === undefined ? '—' : v}</dd></div>`).join('');
+
+    Object.keys(codeLines).forEach((id) => codeLines[id].classList.toggle('hl', st.lines.includes(id)));
+
+    const [tagText, tagKind] = TAGS[st.kind];
+    $('step-count').textContent = `Adım ${idx + 1} / ${steps.length}`;
+    $('step-tag').textContent = tagText;
+    $('step-tag').dataset.kind = tagKind;
+    $('step-text').innerHTML = st.text;
+    $('prev-btn').disabled = idx === 0;
+    $('reset').disabled = idx === 0;
+    $('next-btn').disabled = idx === steps.length - 1;
+
+    document.querySelectorAll('.presets button').forEach((btn) =>
+      btn.setAttribute('aria-pressed', String(btn.dataset.a === aText && btn.dataset.b === bText)));
+  }
+
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    $('play').textContent = '▶ Oynat';
+  }
+
+  function restart(textA, textB, a, b) {
+    stop();
+    aText = textA;
+    bText = textB;
+    steps = buildSteps(a, b);
+    idx = 0;
+    render();
+  }
+
+  function onInput() {
+    const a = parse($('in-a').value);
+    const b = parse($('in-b').value);
+    if (!a || !b) { $('in-err').hidden = false; return; }
+    $('in-err').hidden = true;
+    restart($('in-a').value, $('in-b').value, a, b);
+  }
+
+  $('next-btn').addEventListener('click', () => { stop(); if (idx < steps.length - 1) { idx++; render(); } });
+  $('prev-btn').addEventListener('click', () => { stop(); if (idx > 0) { idx--; render(); } });
+  $('reset').addEventListener('click', () => { stop(); idx = 0; render(); });
+  $('play').addEventListener('click', () => {
+    if (timer) { stop(); return; }
+    if (idx === steps.length - 1) { idx = 0; render(); }
+    $('play').textContent = '❚❚ Durdur';
+    timer = setInterval(() => {
+      if (idx < steps.length - 1) { idx++; render(); }
+      if (idx === steps.length - 1) stop();
+    }, 1100);
+  });
+  document.querySelectorAll('.presets button').forEach((btn) => btn.addEventListener('click', () => {
+    $('in-a').value = btn.dataset.a;
+    $('in-b').value = btn.dataset.b;
+    $('in-err').hidden = true;
+    restart(btn.dataset.a, btn.dataset.b, parse(btn.dataset.a), parse(btn.dataset.b));
+  }));
+  $('in-a').addEventListener('input', onInput);
+  $('in-b').addEventListener('input', onInput);
+  document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next-btn').click();
+    else if (e.key === 'ArrowLeft') $('prev-btn').click();
+  });
+
+  restart(aText, bText, parse(aText), parse(bText));
+})();
+</script>
+</body>
+</html>
