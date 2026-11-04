@@ -158,9 +158,13 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
 .kw { color: var(--kw); }
 
-.why p { margin: 0 0 10px; max-width: 66ch; color: var(--muted); }
-.why p:last-child { margin-bottom: 0; }
+/* Two columns keep lines short enough to read while still using the page width. */
+.why-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; }
+.why-grid > div { border-top: 1px solid var(--line); padding-top: 12px; min-width: 0; }
+.why h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 0 0 6px; text-wrap: balance; }
+.why p { margin: 0; color: var(--muted); }
 .why b { color: var(--ink); }
+@media (max-width: 760px) { .why-grid { grid-template-columns: 1fr; gap: 20px; } }
 .foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
 .foot a { color: var(--accent); }
 
@@ -254,8 +258,16 @@ code, .code, .path, .var dd, .block, input[type="text"] { font-variant-ligatures
 
   <section class="why" aria-labelledby="why-h">
     <h2 id="why-h">Neden O(n) zaman, O(1) bellek?</h2>
-    <p>Her basamağı bir kez hesaplıyoruz: <b>O(n) zaman</b>. Merdiven 5 basamak da olsa 45 basamak da olsa sadece üç sayı tutuyoruz (<code>twoBelow</code>, <code>oneBelow</code>, <code>ways</code>): <b>O(1) bellek</b>.</p>
-    <p>Aynı formülü kendini çağıran bir metotla (<code>ClimbStairs(n - 1) + ClimbStairs(n - 2)</code>) yazsaydık aynı basamaklar tekrar tekrar hesaplanırdı. n = 5'te bile 3. basamak 2 kez, 2. basamak 3 kez hesaplanır; n = 45'te metot <b>2 milyardan fazla</b> kez çağrılır ve LeetCode "Time Limit Exceeded" verir.</p>
+    <div class="why-grid">
+      <div>
+        <h3>Her basamak bir kez hesaplanıyor</h3>
+        <p>Her basamağı bir kez hesaplıyoruz: <b>O(n) zaman</b>. Merdiven 5 basamak da olsa 45 basamak da olsa sadece üç sayı tutuyoruz (<code>twoBelow</code>, <code>oneBelow</code>, <code>ways</code>): <b>O(1) bellek</b>.</p>
+      </div>
+      <div>
+        <h3>Kendini çağıran metot neden yavaş?</h3>
+        <p>Aynı formülü kendini çağıran bir metotla (<code>ClimbStairs(n - 1) + ClimbStairs(n - 2)</code>) yazsaydık aynı basamaklar tekrar tekrar hesaplanırdı. n = 5'te bile 3. basamak 2 kez, 2. basamak 3 kez hesaplanır; n = 45'te metot <b>2 milyardan fazla</b> kez çağrılır ve LeetCode "Time Limit Exceeded" verir.</p>
+      </div>
+    </div>
   </section>
 
   <footer class="foot">

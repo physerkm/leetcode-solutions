@@ -162,9 +162,13 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
 .kw { color: var(--kw); }
 
-.why p { margin: 0 0 10px; max-width: 66ch; color: var(--muted); }
-.why p:last-child { margin-bottom: 0; }
+/* Two columns keep lines short enough to read while still using the page width. */
+.why-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; }
+.why-grid > div { border-top: 1px solid var(--line); padding-top: 12px; min-width: 0; }
+.why h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 0 0 6px; text-wrap: balance; }
+.why p { margin: 0; color: var(--muted); }
 .why b { color: var(--ink); }
+@media (max-width: 760px) { .why-grid { grid-template-columns: 1fr; gap: 20px; } }
 .foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
 .foot a { color: var(--accent); }
 
@@ -262,10 +266,24 @@ code, .code, .cell, .call .op, .call .res, .var dd, input[type="text"] { font-va
 
   <section class="why" aria-labelledby="why-h">
     <h2 id="why-h">Neden her işlem O(1)?</h2>
-    <p>Hiçbir metotta döngü yok. Her metot en fazla iki yığın işlemi yapıyor (<code>Push</code>, <code>Pop</code> ya da <code>Peek</code>) ve bunların her biri, yığında kaç sayı olursa olsun sabit sürede biter: her işlem <b>O(1) zaman</b>. Bedeli bellek: her sayı için <code>mins</code>'te bir not var, yani <b>O(n) ek bellek</b>.</p>
-    <p>Tek bir <code>min</code> değişkeni yetmez. <code>Push</code>'ta güncellemek kolaydır, ama en küçük sayı <code>Pop</code> ile atılınca değişken ondan önceki en küçüğü bilemez; bulmak için bütün yığını taramak gerekir. <code>mins</code> her kattaki en küçüğü sırayla sakladığı için, atılan katın altındaki not doğrudan cevaptır.</p>
-    <p><code>GetMin</code> içinde <code>values.Min()</code> yazmak da doğru sonuç verir, ama her çağrıda bütün sayılara bakar: <b>O(n)</b>. LeetCode 30.000 çağrıya izin veriyor; yığında binlerce sayı varken bu, yüz milyonlarca adım demek.</p>
-    <p><code>mins</code>'e, en küçük değişmese bile her seferinde not yazılıyor. Böylece iki yığın hep aynı yükseklikte kalıyor ve <code>Pop</code> hiçbir şeyi kontrol etmeden ikisinden de atabiliyor. Aynı en küçük sayı iki kez gelse de sorun çıkmıyor; yukarıdaki "aynı en küçük iki kez" örneğini dene. Belleği azaltmak için notu sadece yeni sayı en küçükten küçük ya da ona eşitken yazan bir çeşidi de var, ama o zaman <code>Pop</code>'un atılan sayıyı notla karşılaştırması gerekir.</p>
+    <div class="why-grid">
+      <div>
+        <h3>Hiçbir metotta döngü yok</h3>
+        <p>Her metot en fazla iki yığın işlemi yapıyor (<code>Push</code>, <code>Pop</code> ya da <code>Peek</code>) ve bunların her biri, yığında kaç sayı olursa olsun sabit sürede biter: her işlem <b>O(1) zaman</b>. Bedeli bellek: her sayı için <code>mins</code>'te bir not var, yani <b>O(n) ek bellek</b>.</p>
+      </div>
+      <div>
+        <h3>Tek bir min değişkeni neden yetmez?</h3>
+        <p><code>Push</code>'ta güncellemek kolaydır, ama en küçük sayı <code>Pop</code> ile atılınca değişken ondan önceki en küçüğü bilemez; bulmak için bütün yığını taramak gerekir. <code>mins</code> her kattaki en küçüğü sırayla sakladığı için, atılan katın altındaki not doğrudan cevaptır.</p>
+      </div>
+      <div>
+        <h3>Yığını taramak neden yavaş?</h3>
+        <p><code>GetMin</code> içinde <code>values.Min()</code> yazmak da doğru sonuç verir, ama her çağrıda bütün sayılara bakar: <b>O(n)</b>. LeetCode 30.000 çağrıya izin veriyor; yığında binlerce sayı varken bu, yüz milyonlarca adım demek.</p>
+      </div>
+      <div>
+        <h3>Not neden her seferinde yazılıyor?</h3>
+        <p>En küçük değişmese bile <code>mins</code>'e not yazılıyor. Böylece iki yığın hep aynı yükseklikte kalıyor ve <code>Pop</code> hiçbir şeyi kontrol etmeden ikisinden de atabiliyor. Aynı en küçük sayı iki kez gelse de sorun çıkmıyor; yukarıdaki "aynı en küçük iki kez" örneğini dene. Belleği azaltmak için notu sadece yeni sayı en küçükten küçük ya da ona eşitken yazan bir çeşidi de var, ama o zaman <code>Pop</code>'un atılan sayıyı notla karşılaştırması gerekir.</p>
+      </div>
+    </div>
   </section>
 
   <footer class="foot">

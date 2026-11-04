@@ -158,9 +158,13 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
 .kw { color: var(--kw); }
 
-.why p { margin: 0 0 10px; max-width: 66ch; color: var(--muted); }
-.why p:last-child { margin-bottom: 0; }
+/* Two columns keep lines short enough to read while still using the page width. */
+.why-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; }
+.why-grid > div { border-top: 1px solid var(--line); padding-top: 12px; min-width: 0; }
+.why h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 0 0 6px; text-wrap: balance; }
+.why p { margin: 0; color: var(--muted); }
 .why b { color: var(--ink); }
+@media (max-width: 760px) { .why-grid { grid-template-columns: 1fr; gap: 20px; } }
 .foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
 .foot a { color: var(--accent); }
 
@@ -259,10 +263,24 @@ code, .code, .chip, .mini, .var dd, input[type="text"] { font-variant-ligatures:
 
   <section class="why" aria-labelledby="why-h">
     <h2 id="why-h">Neden O(n)?</h2>
-    <p>Kodda bir <code>foreach</code> ve içinde bir <code>while</code> var; ilk bakışta O(n²) gibi görünüyor. Ama <code>while</code> sadece grup başlarında çalışıyor ve her sayı en fazla bir grubun içinde sayılıyor. Toplamda her sayıya <code>foreach</code>'te bir kez, <code>while</code>'da en fazla bir kez bakılıyor: <b>O(n) zaman</b>. Set n sayı tuttuğu için <b>O(n) bellek</b> kullanıyor.</p>
-    <p>Grup başı kontrolü olmasaydı her sayıdan ileri doğru sayardık. 0'dan 99.999'a kadar bütün sayıların olduğu bir dizide 0'dan 100.000, 1'den 99.999 adım… toplam yaklaşık 5 milyar adım ederdi.</p>
-    <p><code>foreach</code>'in <code>nums</code> yerine <code>set</code> üzerinde dönmesi de önemli. Bir grubun başı dizide çok kez tekrar ediyorsa (örneğin 50.000 tane 1), <code>nums</code> üzerinde dönmek aynı grubu 50.000 kez sayar. Set'te her sayı bir kez olduğu için bu sorun olmuyor.</p>
-    <p>Diziyi sıralayıp baştan sona yürümek de doğru sonuç verir ve kodu daha kısadır. Ama sıralama <b>O(n log n)</b> sürer ve metoda verilen diziyi değiştirir. Set'li çözüm daha hızlı ve girdiye dokunmuyor.</p>
+    <div class="why-grid">
+      <div>
+        <h3>Döngü içinde döngü, yine de O(n)</h3>
+        <p>Kodda bir <code>foreach</code> ve içinde bir <code>while</code> var; ilk bakışta O(n²) gibi görünüyor. Ama <code>while</code> sadece grup başlarında çalışıyor ve her sayı en fazla bir grubun içinde sayılıyor. Toplamda her sayıya <code>foreach</code>'te bir kez, <code>while</code>'da en fazla bir kez bakılıyor: <b>O(n) zaman</b>. Set n sayı tuttuğu için <b>O(n) bellek</b> kullanıyor.</p>
+      </div>
+      <div>
+        <h3>Grup başı kontrolü neden önemli?</h3>
+        <p>Grup başı kontrolü olmasaydı her sayıdan ileri doğru sayardık. 0'dan 99.999'a kadar bütün sayıların olduğu bir dizide 0'dan 100.000, 1'den 99.999 adım… toplam yaklaşık 5 milyar adım ederdi.</p>
+      </div>
+      <div>
+        <h3>Döngü neden set üzerinde dönüyor?</h3>
+        <p><code>foreach</code>'in <code>nums</code> yerine <code>set</code> üzerinde dönmesi de önemli. Bir grubun başı dizide çok kez tekrar ediyorsa (örneğin 50.000 tane 1), <code>nums</code> üzerinde dönmek aynı grubu 50.000 kez sayar. Set'te her sayı bir kez olduğu için bu sorun olmuyor.</p>
+      </div>
+      <div>
+        <h3>Sıralamak da olmaz mı?</h3>
+        <p>Diziyi sıralayıp baştan sona yürümek de doğru sonuç verir ve kodu daha kısadır. Ama sıralama <b>O(n log n)</b> sürer ve metoda verilen diziyi değiştirir. Set'li çözüm daha hızlı ve girdiye dokunmuyor.</p>
+      </div>
+    </div>
   </section>
 
   <footer class="foot">

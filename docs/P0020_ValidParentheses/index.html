@@ -160,8 +160,13 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .nu { color: var(--num); }
 .st { color: var(--str); }
 
-.why p { margin: 0; max-width: 66ch; color: var(--muted); }
+/* Two columns keep lines short enough to read while still using the page width. */
+.why-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; }
+.why-grid > div { border-top: 1px solid var(--line); padding-top: 12px; min-width: 0; }
+.why h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 0 0 6px; text-wrap: balance; }
+.why p { margin: 0; color: var(--muted); }
 .why b { color: var(--ink); }
+@media (max-width: 760px) { .why-grid { grid-template-columns: 1fr; gap: 20px; } }
 .foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
 .foot a { color: var(--accent); }
 </style>
@@ -258,7 +263,16 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 
   <section class="why" aria-labelledby="why-h">
     <h2 id="why-h">Neden O(n)?</h2>
-    <p>Her karakteri bir kez okuyoruz ve her parantez yığına en fazla bir kez girip bir kez çıkıyor. Metin 10.000 karakter de olsa yaklaşık 10.000 adımda biter: <b>O(n) zaman</b>. En kötü durumda, örneğin metin sadece açılan parantezlerden oluşuyorsa, hepsi yığına girer: <b>O(n) bellek</b>.</p>
+    <div class="why-grid">
+      <div>
+        <h3>O(n) zaman</h3>
+        <p>Her karakteri bir kez okuyoruz ve her parantez yığına en fazla bir kez girip bir kez çıkıyor. Metin 10.000 karakter de olsa yaklaşık 10.000 adımda biter: <b>O(n) zaman</b>.</p>
+      </div>
+      <div>
+        <h3>O(n) bellek</h3>
+        <p>En kötü durumda, örneğin metin sadece açılan parantezlerden oluşuyorsa, hepsi yığına girer: <b>O(n) bellek</b>.</p>
+      </div>
+    </div>
   </section>
 
   <footer class="foot">

@@ -151,9 +151,13 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
 .kw { color: var(--kw); }
 
-.why p { margin: 0 0 10px; max-width: 66ch; color: var(--muted); }
-.why p:last-child { margin-bottom: 0; }
+/* Two columns keep lines short enough to read while still using the page width. */
+.why-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; }
+.why-grid > div { border-top: 1px solid var(--line); padding-top: 12px; min-width: 0; }
+.why h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 0 0 6px; text-wrap: balance; }
+.why p { margin: 0; color: var(--muted); }
 .why b { color: var(--ink); }
+@media (max-width: 760px) { .why-grid { grid-template-columns: 1fr; gap: 20px; } }
 .video video { display: block; width: 100%; max-width: 880px; height: auto; aspect-ratio: 16 / 9; border-radius: 12px; border: 1px solid var(--line); background: #000; }
 .video-note { margin: 10px 0 0; font-size: 14px; color: var(--muted); }
 .foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
@@ -261,9 +265,24 @@ code, .code, .cell, .var dd, .parts b, input[type="text"] { font-variant-ligatur
 
   <section class="why" aria-labelledby="why-h">
     <h2 id="why-h">Neden O(1) ekstra bellek?</h2>
-    <p>Diziyi bir kez soldan sağa, bir kez sağdan sola geziyoruz: <b>O(n) zaman</b>.</p>
-    <p>Daha kolay bir çözümde "sol" ve "sağ" çarpımları <code>left</code> ve <code>right</code> adlı iki ayrı dizide tutulur ve sonra kutu kutu çarpılır. O da O(n) zamanda çalışır ama n'er elemanlık iki dizi açtığı için <b>O(n) bellek</b> kullanır. Burada sol çarpımları doğrudan <code>answer</code>'a yazıyoruz; sağ çarpımları ise hiç saklamıyoruz, sağdan sola giderken tek bir <code>right</code> değişkeninde biriktiriyoruz. <code>answer</code> zaten döndürülecek dizi olduğu için hesaba katılmıyor; fazladan sadece <code>n</code>, <code>i</code> ve <code>right</code> var: <b>O(1) ekstra bellek</b>.</p>
-    <p>Hepsini çarpıp <code>nums[i]</code>'ye bölmek soruda yasak; dizide 0 varsa da 0'a bölünemeyeceği için çalışmaz. Sol × sağ yöntemi hiç bölme yapmaz, 0'lar da kendiliğinden doğru sonucu verir.</p>
+    <div class="why-grid">
+      <div>
+        <h3>O(n) zaman</h3>
+        <p>Diziyi bir kez soldan sağa, bir kez sağdan sola geziyoruz. Dizi ne kadar uzunsa iş de o oranda artar: <b>O(n) zaman</b>.</p>
+      </div>
+      <div>
+        <h3>O(1) ekstra bellek</h3>
+        <p>Sol çarpımları doğrudan <code>answer</code>'a yazıyoruz; sağ çarpımları ise hiç saklamıyoruz, sağdan sola giderken tek bir <code>right</code> değişkeninde biriktiriyoruz. <code>answer</code> zaten döndürülecek dizi olduğu için hesaba katılmıyor; fazladan sadece <code>n</code>, <code>i</code> ve <code>right</code> var: <b>O(1) ekstra bellek</b>.</p>
+      </div>
+      <div>
+        <h3>Daha kolay çözüm neden daha fazla bellek ister?</h3>
+        <p>Daha kolay bir çözümde "sol" ve "sağ" çarpımları <code>left</code> ve <code>right</code> adlı iki ayrı dizide tutulur ve sonra kutu kutu çarpılır. O da O(n) zamanda çalışır ama n'er elemanlık iki dizi açtığı için <b>O(n) bellek</b> kullanır.</p>
+      </div>
+      <div>
+        <h3>Neden bölme kullanmıyoruz?</h3>
+        <p>Hepsini çarpıp <code>nums[i]</code>'ye bölmek soruda yasak; dizide 0 varsa da 0'a bölünemeyeceği için çalışmaz. Sol × sağ yöntemi hiç bölme yapmaz, 0'lar da kendiliğinden doğru sonucu verir.</p>
+      </div>
+    </div>
   </section>
 
   <footer class="foot">

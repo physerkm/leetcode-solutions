@@ -155,8 +155,13 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .kw { color: var(--kw); }
 .nu { color: var(--num); }
 
-.why p { margin: 0; max-width: 66ch; color: var(--muted); }
+/* Two columns keep lines short enough to read while still using the page width. */
+.why-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; }
+.why-grid > div { border-top: 1px solid var(--line); padding-top: 12px; min-width: 0; }
+.why h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 0 0 6px; text-wrap: balance; }
+.why p { margin: 0; color: var(--muted); }
 .why b { color: var(--ink); }
+@media (max-width: 760px) { .why-grid { grid-template-columns: 1fr; gap: 20px; } }
 :root { color-scheme: light; }
 body { margin: 0; }
 .foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
@@ -247,7 +252,16 @@ body { margin: 0; }
 
   <section class="why" aria-labelledby="why-h">
     <h2 id="why-h">Neden bu kadar hızlı?</h2>
-    <p>Her bakış, kalan aralığı yarıya indiriyor: 12 → 6 → 3 → 1. Bu 12 sayılık örnekte <b>en fazla 4 bakış</b> yeter. LeetCode'daki en büyük matriste (100 × 100 = 10.000 hücre) bile <b>en fazla 14 bakış</b> yeter. Bütün hücreleri tek tek gezseydik bu, 10.000 bakış demekti.</p>
+    <div class="why-grid">
+      <div>
+        <h3>Her bakış aralığı yarıya indiriyor</h3>
+        <p>Her bakış, kalan aralığı yarıya indiriyor: 12 → 6 → 3 → 1. Bu 12 sayılık örnekte <b>en fazla 4 bakış</b> yeter.</p>
+      </div>
+      <div>
+        <h3>En büyük matriste bile 14 bakış</h3>
+        <p>LeetCode'daki en büyük matriste (100 × 100 = 10.000 hücre) bile <b>en fazla 14 bakış</b> yeter. Bütün hücreleri tek tek gezseydik bu, 10.000 bakış demekti.</p>
+      </div>
+    </div>
   </section>
 
   <footer class="foot">

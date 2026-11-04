@@ -151,9 +151,13 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
 .kw { color: var(--kw); }
 
-.why p { margin: 0 0 10px; max-width: 66ch; color: var(--muted); }
-.why p:last-child { margin-bottom: 0; }
+/* Two columns keep lines short enough to read while still using the page width. */
+.why-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; }
+.why-grid > div { border-top: 1px solid var(--line); padding-top: 12px; min-width: 0; }
+.why h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 0 0 6px; text-wrap: balance; }
+.why p { margin: 0; color: var(--muted); }
 .why b { color: var(--ink); }
+@media (max-width: 760px) { .why-grid { grid-template-columns: 1fr; gap: 20px; } }
 .foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
 .foot a { color: var(--accent); }
 
@@ -247,9 +251,24 @@ code, .code, .box, .var dd, .out b, input[type="text"] { font-variant-ligatures:
 
   <section class="why" aria-labelledby="why-h">
     <h2 id="why-h">Neden O(1) ekstra bellek?</h2>
-    <p>Diziyi iki kez geziyoruz: <b>O(n) zaman</b>. İşaretleri ayrı bir dizide değil, <code>nums</code>'ın kendi kutularında, sayının işaretinde tutuyoruz. Fazladan sadece <code>num</code>, <code>box</code> ve <code>i</code> gibi birkaç değişken var: <b>O(1) ekstra bellek</b>. Döndürdüğümüz liste bu hesaba katılmıyor.</p>
-    <p>Daha kolay bir çözüm de var: görülen sayıları <code>bool[] seen = new bool[n + 1]</code> dizisinde işaretleyip sonra <code>false</code> kalanları toplamak. O da O(n) zamanda çalışır ama n + 1 elemanlık ayrı bir dizi açtığı için <b>O(n) bellek</b> kullanır. Bu sayfadaki çözüm aynı işaretlemeyi <code>nums</code>'ın içinde yaptığı için o diziye gerek kalmıyor.</p>
-    <p>İkinci döngüde negatif kutuları yeniden pozitife çeviriyoruz. Böylece metodu çağıran kod dizisini verdiği gibi geri alıyor. Bunun için ayrı bir döngü de gerekmiyor; kayıp sayıları toplarken aynı turda yapılıyor.</p>
+    <div class="why-grid">
+      <div>
+        <h3>O(n) zaman</h3>
+        <p>Diziyi iki kez geziyoruz: önce gördüğümüz sayıları işaretliyoruz, sonra işaretsiz kalan kutuları topluyoruz. Dizi ne kadar uzunsa iş de o oranda artar: <b>O(n) zaman</b>.</p>
+      </div>
+      <div>
+        <h3>O(1) ekstra bellek</h3>
+        <p>İşaretleri ayrı bir dizide değil, <code>nums</code>'ın kendi kutularında, sayının işaretinde tutuyoruz. Fazladan sadece <code>num</code>, <code>box</code> ve <code>i</code> gibi birkaç değişken var: <b>O(1) ekstra bellek</b>. Döndürdüğümüz liste bu hesaba katılmıyor.</p>
+      </div>
+      <div>
+        <h3>Daha kolay çözüm neden daha fazla bellek ister?</h3>
+        <p>Daha kolay bir çözüm de var: görülen sayıları <code>bool[] seen = new bool[n + 1]</code> dizisinde işaretleyip sonra <code>false</code> kalanları toplamak. O da O(n) zamanda çalışır ama n + 1 elemanlık ayrı bir dizi açtığı için <b>O(n) bellek</b> kullanır. Bu sayfadaki çözüm aynı işaretlemeyi <code>nums</code>'ın içinde yaptığı için o diziye gerek kalmıyor.</p>
+      </div>
+      <div>
+        <h3>Dizi neden eski hâline dönüyor?</h3>
+        <p>İkinci döngüde negatif kutuları yeniden pozitife çeviriyoruz. Böylece metodu çağıran kod dizisini verdiği gibi geri alıyor. Bunun için ayrı bir döngü de gerekmiyor; kayıp sayıları toplarken aynı turda yapılıyor.</p>
+      </div>
+    </div>
   </section>
 
   <footer class="foot">

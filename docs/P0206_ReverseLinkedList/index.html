@@ -146,8 +146,13 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 .ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
 .kw { color: var(--kw); }
 
-.why p { margin: 0; max-width: 66ch; color: var(--muted); }
+/* Two columns keep lines short enough to read while still using the page width. */
+.why-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; }
+.why-grid > div { border-top: 1px solid var(--line); padding-top: 12px; min-width: 0; }
+.why h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 0 0 6px; text-wrap: balance; }
+.why p { margin: 0; color: var(--muted); }
 .why b { color: var(--ink); }
+@media (max-width: 760px) { .why-grid { grid-template-columns: 1fr; gap: 20px; } }
 .foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
 .foot a { color: var(--accent); }
 </style>
@@ -240,7 +245,16 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 
   <section class="why" aria-labelledby="why-h">
     <h2 id="why-h">Neden O(1) bellek?</h2>
-    <p>Her node'a bir kez uğruyoruz: <b>O(n) zaman</b>. Liste 5 node da olsa 5000 node da olsa sadece üç değişken kullanıyoruz (<code>prev</code>, <code>current</code>, <code>next</code>) ve hiç yeni node oluşturmuyoruz: <b>O(1) bellek</b>.</p>
+    <div class="why-grid">
+      <div>
+        <h3>O(n) zaman</h3>
+        <p>Her node'a bir kez uğruyoruz. Liste ne kadar uzunsa o kadar adım sürer: <b>O(n) zaman</b>.</p>
+      </div>
+      <div>
+        <h3>O(1) bellek</h3>
+        <p>Liste 5 node da olsa 5000 node da olsa sadece üç değişken kullanıyoruz (<code>prev</code>, <code>current</code>, <code>next</code>) ve hiç yeni node oluşturmuyoruz: <b>O(1) bellek</b>.</p>
+      </div>
+    </div>
   </section>
 
   <footer class="foot">
