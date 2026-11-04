@@ -10,6 +10,7 @@ LeetCode'da çözdüğüm soruların C# çözümleri.
 | 70 | [Climbing Stairs](https://leetcode.com/problems/climbing-stairs/) | Easy | [C#](src/LeetCode/Problems/P0070_ClimbingStairs/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0070_ClimbingStairs/) |
 | 74 | [Search a 2D Matrix](https://leetcode.com/problems/search-a-2d-matrix/) | Medium | [C#](src/LeetCode/Problems/P0074_SearchA2DMatrix/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0074_SearchA2DMatrix/) |
 | 128 | [Longest Consecutive Sequence](https://leetcode.com/problems/longest-consecutive-sequence/) | Medium | [C#](src/LeetCode/Problems/P0128_LongestConsecutiveSequence/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0128_LongestConsecutiveSequence/) |
+| 155 | [Min Stack](https://leetcode.com/problems/min-stack/) | Medium | [C#](src/LeetCode/Problems/P0155_MinStack/MinStack.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0155_MinStack/) |
 | 206 | [Reverse Linked List](https://leetcode.com/problems/reverse-linked-list/) | Easy | [C#](src/LeetCode/Problems/P0206_ReverseLinkedList/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0206_ReverseLinkedList/) |
 | 238 | [Product of Array Except Self](https://leetcode.com/problems/product-of-array-except-self/) | Medium | [C#](src/LeetCode/Problems/P0238_ProductOfArrayExceptSelf/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0238_ProductOfArrayExceptSelf/) · [Video](https://physerkm.github.io/leetcode-solutions/P0238_ProductOfArrayExceptSelf/#video) |
 | 448 | [Find All Numbers Disappeared in an Array](https://leetcode.com/problems/find-all-numbers-disappeared-in-an-array/) | Easy | [C#](src/LeetCode/Problems/P0448_FindAllNumbersDisappearedInAnArray/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0448_FindAllNumbersDisappearedInAnArray/) |
@@ -58,7 +59,7 @@ Her soru kendi namespace'inde (`LeetCode.Problems.P0074_SearchA2DMatrix`) durdu�
 
 ## Yeni soru ekleme
 
-1. `src/LeetCode/Problems/P<numara>_<Ad>/Solution.cs` dosyasını oluştur. Numarayı 4 haneye tamamla, örneğin `P0020_ValidParentheses`.
+1. `src/LeetCode/Problems/P<numara>_<Ad>/Solution.cs` dosyasını oluştur. Numarayı 4 haneye tamamla, örneğin `P0020_ValidParentheses`. Tasarım sorularında LeetCode sınıfa kendi adını verir; dosya da o adı alır, örneğin `MinStack.cs`.
 2. Dosyanın ilk satırına klasörle aynı namespace'i yaz: `namespace LeetCode.Problems.P0020_ValidParentheses;`
 3. LeetCode'daki kodu yapıştırıp çöz. Gönderirken namespace satırını kopyalama, sadece `Solution` sınıfını al.
 4. `tests/LeetCode.Tests/Problems/` altına aynı adla bir test ekle.

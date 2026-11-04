@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>En Küçüğü Hatırlayan Yığın</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: one reading column; the stepper is a single tool panel (controls, step card, calls, then stacks + variables | code) that stacks on phones. */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --ink: #141b26;
+  --muted: #5a6779;
+  --line: #d6dce6;
+  --accent: #3346c8;
+  --accent-ink: #ffffff;
+  --range: #e3e9fb;
+  --range-ink: #1d2a6b;
+  --probe: #c46f00;
+  --good: #17824a;
+  --good-soft: #dcf1e4;
+  --good-soft-ink: #145c36;
+  --bad: #b8402a;
+  --code-bg: #f7f8fb;
+  --code-hl: #dfe5fb;
+  --kw: #7a3aa8;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+    --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff; --probe: #e6a23c;
+    --good: #3fbf7a; --good-soft: #14301f; --good-soft-ink: #8fe0b2; --bad: #ff7d66;
+    --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+  --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff; --probe: #e6a23c;
+  --good: #3fbf7a; --good-soft: #14301f; --good-soft-ink: #8fe0b2; --bad: #ff7d66;
+  --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0;
+  color-scheme: dark;
+}
+
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
+.wrap {
+  max-width: 1040px; margin: 0 auto;
+  padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px;
+}
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--muted); margin: 0; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 6vw, 54px); line-height: 1.05; letter-spacing: -.02em; margin: 8px 0 14px; text-wrap: balance; }
+.lead { max-width: 62ch; color: var(--muted); margin: 0; font-size: 17px; }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -.01em; margin: 0 0 18px; text-wrap: balance; }
+code { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+
+/* Idea */
+.idea { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; list-style: none; padding: 0; margin: 0; }
+.idea li { border-top: 2px solid var(--ink); padding-top: 12px; min-width: 0; }
+.idea .n { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.idea h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 2px 0 6px; text-wrap: balance; }
+.idea p { margin: 0; color: var(--muted); font-size: 15px; }
+@media (max-width: 760px) { .idea { grid-template-columns: 1fr; gap: 20px; } }
+
+/* Stepper panel */
+.stepper { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+@media (max-width: 560px) { .stepper { padding: 16px; } }
+.stepper h2 { margin: 0; }
+.controls { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+.field { flex: 1 1 22em; min-width: 0; }
+.field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+input[type="text"] { width: 100%; max-width: 34em; box-sizing: border-box; font: 600 16px var(--font-mono); padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.err { margin: 0; font-size: 13px; color: var(--bad); max-width: 78ch; }
+button { font: 500 14px var(--font-body); padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .4; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.presets button { font-size: 13px; padding: 7px 10px; }
+.presets button[aria-pressed="true"] { border-color: var(--accent); background: var(--range); color: var(--range-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav { display: flex; flex-wrap: wrap; gap: 8px; }
+#play { min-width: 7.5em; }
+
+.step { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+.step-meta { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag { font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--range); color: var(--range-ink); }
+.tag[data-kind="ok"] { background: var(--good); color: var(--surface); }
+#step-text { margin: 8px 0 0; font-size: 16.5px; max-width: 78ch; min-height: 3.2em; }
+
+.panel-label { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 8px; }
+.panel-label .hint { font-weight: 400; }
+.empty-note { color: var(--muted); font-size: 15px; margin: 0; }
+
+/* Calls in LeetCode's input/output format: the call on top, what it returned below. */
+.calls { display: flex; flex-wrap: wrap; gap: 8px; }
+.call { display: flex; flex-direction: column; gap: 4px; }
+.call .op, .call .res {
+  min-width: 46px; height: 30px; padding: 0 8px; box-sizing: border-box; border-radius: 7px;
+  display: grid; place-items: center; white-space: nowrap;
+  font: 600 13px var(--font-mono); border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+.call .res { background: var(--code-bg); color: var(--muted); }
+.call .res.num { background: var(--good-soft); color: var(--good-soft-ink); border-color: transparent; }
+.call.done .op { color: var(--muted); }
+.call.now .op { border-color: var(--accent); background: var(--range); color: var(--range-ink); }
+
+/* The two stacks side by side, top level first, standing on a shared floor. */
+.stacks { display: grid; grid-template-columns: 2.6em 68px 68px minmax(0, 1fr); column-gap: 10px; row-gap: 6px; align-items: center; }
+.stacks .head { font: 600 12px var(--font-mono); color: var(--muted); text-align: center; }
+.stacks .side { font: 600 11px var(--font-mono); color: var(--muted); text-align: right; }
+.stacks .note { font: 600 12px var(--font-mono); color: var(--probe); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stacks .note.new { color: var(--accent); }
+.stacks .note.bad { color: var(--bad); }
+.stacks .span { grid-column: 2 / 5; }
+.floor { grid-column: 2 / 4; border-top: 3px solid var(--ink); margin-top: 2px; }
+.cell {
+  height: 40px; box-sizing: border-box; border-radius: 9px; display: grid; place-items: center;
+  font: 700 17px var(--font-mono); font-variant-numeric: tabular-nums;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  transition: background-color .2s, color .2s, border-color .2s;
+}
+.cell[data-state="new"] { background: var(--range); color: var(--range-ink); border-color: transparent; }
+.cell[data-state="min"] { background: var(--good-soft); color: var(--good-soft-ink); border-color: transparent; }
+.cell.pending { background: transparent; border: 2px dashed var(--line); color: var(--muted); }
+.cell.gone { background: transparent; border: 2px dashed var(--bad); color: var(--bad); text-decoration: line-through; }
+.cell.probe { outline: 2px solid var(--probe); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) { .cell { transition: none; } }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin-top: 12px; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; border: 1px solid var(--line); }
+.sw.new { background: var(--range); border-color: transparent; }
+.sw.min { background: var(--good-soft); border-color: transparent; }
+.sw.probe { background: transparent; border: 2px solid var(--probe); }
+.sw.pending { background: transparent; border: 2px dashed var(--muted); }
+.sw.gone { background: transparent; border: 2px dashed var(--bad); }
+
+/* Stacks + variables | code */
+.board { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 28px; }
+@media (max-width: 880px) { .board { grid-template-columns: 1fr; } }
+.col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.vars-block { margin-top: 20px; }
+.vars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.var { border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; background: var(--bg); min-width: 0; }
+.var dt { font: 400 12px var(--font-mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.var dd { margin: 0; font: 600 18px var(--font-mono); font-variant-numeric: tabular-nums; }
+.var.changed { border-color: var(--accent); background: var(--range); }
+.var.changed dd { color: var(--range-ink); }
+.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 0; overflow-x: auto; font: 13px/1.6 var(--font-mono); }
+@media (max-width: 560px) { .code { font-size: 12px; } }
+.ln { display: block; padding: 0 14px 0 11px; white-space: pre; border-left: 3px solid transparent; }
+.ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
+.kw { color: var(--kw); }
+
+.why p { margin: 0 0 10px; max-width: 66ch; color: var(--muted); }
+.why p:last-child { margin-bottom: 0; }
+.why b { color: var(--ink); }
+.foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+.foot a { color: var(--accent); }
+
+/* No ligatures: `==` and `-` combos should look the way they are typed.
+   Kept last because the `font` shorthand above would reset it. */
+code, .code, .cell, .call .op, .call .res, .var dd, input[type="text"] { font-variant-ligatures: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">LeetCode 155 · Min Stack · Medium</p>
+    <h1>En Küçüğü Hatırlayan Yığın</h1>
+    <p class="lead">Çözümün her adımını burada izleyebilirsin. Bir çağrı dizisi seç, <b>İleri</b>'ye bas ya da <b>Oynat</b>'a tıkla; ikinci yığının en küçük sayıyı hiç aramadan nasıl hatırladığını gör.</p>
+  </header>
+
+  <section aria-labelledby="idea-h">
+    <h2 id="idea-h">Fikir üç adımda</h2>
+    <ol class="idea">
+      <li>
+        <span class="n">1</span>
+        <h3>İki yığın yan yana</h3>
+        <p><code>values</code> konan sayıları tutar. <code>mins</code> her katta bir not tutar: o kat ve altındaki en küçük sayı. İki yığın hep aynı yükseklikte.</p>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <h3>Koyarken notu yaz</h3>
+        <p><code>Push</code> sayıyı <code>values</code>'a koyar. <code>mins</code>'e de yeni sayı ile alttaki notun küçüğünü yazar: <code>Math.Min(val, mins.Peek())</code>.</p>
+      </li>
+      <li>
+        <span class="n">3</span>
+        <h3>Atarken notu da at</h3>
+        <p><code>Pop</code> iki yığından birer tane atar; alttaki not o katın en küçüğünü zaten bilir. <code>GetMin</code> sadece <code>mins</code>'in tepesine bakar.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="stepper" aria-labelledby="st-h">
+    <h2 id="st-h">Adım adım izle</h2>
+
+    <div class="controls">
+      <div class="row">
+        <div class="field">
+          <label for="list">Çağrılar (virgülle ayır: push sayı, pop, top, getMin; en fazla 10)</label>
+          <input id="list" type="text" value="push -2, push 0, push -3, getMin, pop, top, getMin" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="nav">
+          <button type="button" id="reset">Baştan</button>
+          <button type="button" id="prev-btn">← Geri</button>
+          <button type="button" id="next-btn" class="primary">İleri →</button>
+          <button type="button" id="play">▶ Oynat</button>
+        </div>
+      </div>
+      <div class="presets" role="group" aria-label="Hazır örnekler">
+        <button type="button" data-l="push -2, push 0, push -3, getMin, pop, top, getMin">LeetCode örneği</button>
+        <button type="button" data-l="push 2, push 3, push 2, getMin, pop, getMin, pop, getMin">aynı en küçük iki kez</button>
+        <button type="button" data-l="push 5, push 4, push 3, getMin, pop, getMin, pop, getMin">azalan sayılar</button>
+        <button type="button" data-l="push 1, push 2, push 3, getMin, pop, pop, getMin">artan sayılar</button>
+      </div>
+      <p class="err" id="list-err" hidden>Çağrıları virgülle ayır: <code>push</code> ve bir sayı, <code>pop</code>, <code>top</code> ya da <code>getMin</code>. En fazla 10 çağrı yazabilirsin, sayılar -999 ile 999 arasında olmalı. <code>pop</code>, <code>top</code> ve <code>getMin</code> boş yığında çağrılamaz; LeetCode da bunu hiç yapmaz.</p>
+    </div>
+
+    <div class="step" aria-live="polite">
+      <div class="step-meta"><span id="step-count"></span><span id="step-tag" class="tag"></span></div>
+      <p id="step-text"></p>
+    </div>
+
+    <div>
+      <p class="panel-label">Çağrılar <span class="hint">(üstte çağrı, altta dönen değer; LeetCode'daki girdi/çıktı gibi)</span></p>
+      <div class="calls" id="calls"></div>
+    </div>
+
+    <div class="board">
+      <div class="col">
+        <p class="panel-label">Yığınlar <span class="hint">(en üstteki kat yığının tepesi)</span></p>
+        <div class="stacks" id="stacks"></div>
+        <div class="legend">
+          <span><i class="sw new"></i>bu adımda konan</span>
+          <span><i class="sw min"></i>mins'in tepesi: şu anki en küçük</span>
+          <span><i class="sw probe"></i>Peek() ile bakılan</span>
+          <span><i class="sw pending"></i>henüz yazılmamış not</span>
+          <span><i class="sw gone"></i>bu adımda atılan</span>
+        </div>
+        <div class="vars-block">
+          <p class="panel-label">Değişkenler</p>
+          <dl class="vars" id="vars"></dl>
+        </div>
+      </div>
+      <div class="col">
+        <p class="panel-label">Kod (MinStack.cs, yorum satırları olmadan)</p>
+        <div class="code" id="code" role="region" aria-label="C# kodu" tabindex="0"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-h">
+    <h2 id="why-h">Neden her işlem O(1)?</h2>
+    <p>Hiçbir metotta döngü yok. Her metot en fazla iki yığın işlemi yapıyor (<code>Push</code>, <code>Pop</code> ya da <code>Peek</code>) ve bunların her biri, yığında kaç sayı olursa olsun sabit sürede biter: her işlem <b>O(1) zaman</b>. Bedeli bellek: her sayı için <code>mins</code>'te bir not var, yani <b>O(n) ek bellek</b>.</p>
+    <p>Tek bir <code>min</code> değişkeni yetmez. <code>Push</code>'ta güncellemek kolaydır, ama en küçük sayı <code>Pop</code> ile atılınca değişken ondan önceki en küçüğü bilemez; bulmak için bütün yığını taramak gerekir. <code>mins</code> her kattaki en küçüğü sırayla sakladığı için, atılan katın altındaki not doğrudan cevaptır.</p>
+    <p><code>GetMin</code> içinde <code>values.Min()</code> yazmak da doğru sonuç verir, ama her çağrıda bütün sayılara bakar: <b>O(n)</b>. LeetCode 30.000 çağrıya izin veriyor; yığında binlerce sayı varken bu, yüz milyonlarca adım demek.</p>
+    <p><code>mins</code>'e, en küçük değişmese bile her seferinde not yazılıyor. Böylece iki yığın hep aynı yükseklikte kalıyor ve <code>Pop</code> hiçbir şeyi kontrol etmeden ikisinden de atabiliyor. Aynı en küçük sayı iki kez gelse de sorun çıkmıyor; yukarıdaki "aynı en küçük iki kez" örneğini dene. Belleği azaltmak için notu sadece yeni sayı en küçükten küçük ya da ona eşitken yazan bir çeşidi de var, ama o zaman <code>Pop</code>'un atılan sayıyı notla karşılaştırması gerekir.</p>
+  </section>
+
+  <footer class="foot">
+    <a href="https://leetcode.com/problems/min-stack/">Soru: LeetCode 155</a>
+    <a href="https://github.com/physerkm/leetcode-solutions/blob/main/src/LeetCode/Problems/P0155_MinStack/MinStack.cs">Kod: MinStack.cs</a>
+    <a href="../">Tüm anlatımlar</a>
+    <a href="https://github.com/physerkm/leetcode-solutions">Repo: physerkm/leetcode-solutions</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const MAX_OPS = 10;
+
+  // Steps: mirrors MinStack.cs line by line.
+  // values and mins are arrays from bottom to top. results[k] is what call k returned
+  // (null for void calls, undefined while it has not run yet); call 0 is the constructor.
+  // newCol: the stack whose top was pushed on this step ('v' or 'm').
+  // probe: the cell read with Peek() on this step ({ col, level }).
+  // gone: the pair removed by Pop() on this step ({ v, m }).
+  function buildSteps(ops) {
+    const values = [];
+    const mins = [];
+    const calls = ['MinStack()', ...ops.map(opLabel)];
+    const results = calls.map(() => undefined);
+    const steps = [];
+    let call = 0;
+    let val;
+    const snap = (s) => steps.push({
+      values: values.slice(), mins: mins.slice(), results: results.slice(), calls, call, val,
+      newCol: null, probe: null, gone: null, changed: [], ...s,
+    });
+
+    results[0] = null;
+    snap({
+      kind: 'start', lines: ['ctor', 'ctorV', 'ctorM'],
+      text: 'LeetCode önce <code>new MinStack()</code> çağırıyor. Constructor iki boş yığın oluşturuyor: sayılar için <code>values</code>, en küçükler için <code>mins</code>.',
+    });
+
+    ops.forEach((op, k) => {
+      call = k + 1;
+      val = undefined;
+
+      if (op.kind === 'push') {
+        val = op.val;
+        values.push(val);
+        snap({
+          kind: 'push', lines: ['push', 'pushV'], changed: ['val', 'values.Count'], newCol: 'v',
+          text: `<code>Push(${val})</code>: ${val} önce <code>values</code>'un tepesine konuyor. <code>mins</code>'te bu kat için henüz not yok.`,
+        });
+
+        if (mins.length === 0) {
+          mins.push(val);
+          results[call] = null;
+          snap({
+            kind: 'note', lines: ['if', 'pushFirst'], changed: ['mins.Count'], newCol: 'm',
+            text: `<code>mins</code> boş, yani ${val} yığındaki tek sayı. Tek sayı olduğu için en küçük de o: <code>mins</code>'e ${val} yazılıyor.`,
+          });
+        } else {
+          const below = mins[mins.length - 1];
+          const m = Math.min(val, below);
+          mins.push(m);
+          results[call] = null;
+          const verdict = val < below
+            ? `Yeni sayı daha küçük: en küçük artık ${val}.`
+            : val === below
+              ? `İkisi eşit: en küçük yine ${m}. Not yine de yazılıyor, iki yığın aynı yükseklikte kalsın.`
+              : `Yeni sayı daha büyük: en küçük değişmedi, alttaki not (${below}) bu kata da yazılıyor.`;
+          snap({
+            kind: 'note', lines: ['if', 'else', 'pushMin'], changed: ['mins.Count'], newCol: 'm',
+            probe: { col: 'm', level: mins.length - 2 },
+            text: `<code>mins</code> boş değil. Alttaki katın notu <code>mins.Peek()</code> = ${below}. <code>Math.Min(${val}, ${below})</code> → ${m}. ${verdict}`,
+          });
+        }
+      } else if (op.kind === 'pop') {
+        const v = values.pop();
+        const m = mins.pop();
+        results[call] = null;
+        let after;
+        if (mins.length === 0) after = ' Yığınlar artık boş.';
+        else {
+          const newMin = mins[mins.length - 1];
+          after = newMin !== m
+            ? ` En küçük artık ${newMin}: bu değer alttaki katın notunda zaten yazılıydı, hiçbir sayı aranmadı.`
+            : ` Alttaki katın notu da ${newMin}: en küçük değişmedi.`;
+        }
+        snap({
+          kind: 'pop', lines: ['pop', 'popV', 'popM'], changed: ['values.Count', 'mins.Count'], gone: { v, m },
+          text: `<code>Pop()</code>: iki yığının tepesi birlikte atılıyor: <code>values</code>'tan ${v}, <code>mins</code>'ten ${m}.${after}`,
+        });
+      } else if (op.kind === 'top') {
+        const v = values[values.length - 1];
+        results[call] = v;
+        snap({
+          kind: 'top', lines: ['top', 'topR'], probe: { col: 'v', level: values.length - 1 },
+          text: `<code>Top()</code>: <code>values</code>'un tepesine bakılıyor, sayı yerinden alınmıyor → <b>${v}</b>.`,
+        });
+      } else {
+        const m = mins[mins.length - 1];
+        results[call] = m;
+        snap({
+          kind: 'getmin', lines: ['getmin', 'minR'], probe: { col: 'm', level: mins.length - 1 },
+          text: `<code>GetMin()</code>: <code>mins</code>'in tepesine bakılıyor → <b>${m}</b>. <code>values</code>'taki sayılara hiç bakılmadı.`,
+        });
+      }
+    });
+
+    call = calls.length;
+    val = undefined;
+    const output = `[${results.map((r) => (r === null ? 'null' : r)).join(',')}]`;
+    snap({
+      kind: 'done', lines: [],
+      text: ops.length === 0
+        ? `Başka çağrı yok. Çıktı: <code>${output}</code>.`
+        : `Bütün çağrılar bitti. LeetCode'un beklediği çıktı: <code>${output}</code>.`,
+    });
+    return steps;
+  }
+
+  function opLabel(op) {
+    if (op.kind === 'push') return `push(${op.val})`;
+    return op.kind === 'getmin' ? 'getMin()' : `${op.kind}()`;
+  }
+
+  // Rendering
+  const K = (word) => `<span class="kw">${word}</span>`;
+  const CODE = [
+    ['', `${K('private')} ${K('readonly')} Stack&lt;${K('int')}&gt; values;`],
+    ['', `${K('private')} ${K('readonly')} Stack&lt;${K('int')}&gt; mins;`],
+    ['', ''],
+    ['ctor', `${K('public')} MinStack()`],
+    ['', '{'],
+    ['ctorV', `    values = ${K('new')} Stack&lt;${K('int')}&gt;();`],
+    ['ctorM', `    mins = ${K('new')} Stack&lt;${K('int')}&gt;();`],
+    ['', '}'],
+    ['', ''],
+    ['push', `${K('public')} ${K('void')} Push(${K('int')} val)`],
+    ['', '{'],
+    ['pushV', '    values.Push(val);'],
+    ['if', `    ${K('if')} (mins.Count == 0)`],
+    ['pushFirst', '        mins.Push(val);'],
+    ['else', `    ${K('else')}`],
+    ['pushMin', '        mins.Push(Math.Min(val, mins.Peek()));'],
+    ['', '}'],
+    ['', ''],
+    ['pop', `${K('public')} ${K('void')} Pop()`],
+    ['', '{'],
+    ['popV', '    values.Pop();'],
+    ['popM', '    mins.Pop();'],
+    ['', '}'],
+    ['', ''],
+    ['top', `${K('public')} ${K('int')} Top()`],
+    ['', '{'],
+    ['topR', `    ${K('return')} values.Peek();`],
+    ['', '}'],
+    ['', ''],
+    ['getmin', `${K('public')} ${K('int')} GetMin()`],
+    ['', '{'],
+    ['minR', `    ${K('return')} mins.Peek();`],
+    ['', '}'],
+  ];
+  $('code').innerHTML = CODE.map(([id, html]) => `<span class="ln"${id ? ` data-id="${id}"` : ''}>${html || ' '}</span>`).join('');
+  const codeLines = {};
+  document.querySelectorAll('.ln[data-id]').forEach((el) => { codeLines[el.dataset.id] = el; });
+
+  const TAGS = {
+    start: ['Başlangıç', ''], push: ['Push', ''], note: ['Push · mins notu', ''],
+    pop: ['Pop', ''], top: ['Top', ''], getmin: ['GetMin', ''], done: ['Bitti', 'ok'],
+  };
+
+  let listText = 'push -2, push 0, push -3, getMin, pop, top, getMin';
+  let steps = [];
+  let idx = 0;
+  let timer = null;
+
+  // Returns the list of calls, or null when the text is not valid.
+  function parse(raw) {
+    const parts = raw.split(',').map((p) => p.trim().toLowerCase()).filter(Boolean);
+    if (parts.length > MAX_OPS) return null;
+    const ops = [];
+    let height = 0;
+    for (const p of parts) {
+      const push = p.match(/^push\s*\(?\s*(-?\d+)\s*\)?$/);
+      const other = p.match(/^(pop|top|getmin)\s*(\(\s*\))?$/);
+      if (push) {
+        const v = Number(push[1]);
+        if (v < -999 || v > 999) return null;
+        ops.push({ kind: 'push', val: v === 0 ? 0 : v });
+        height++;
+      } else if (other) {
+        if (height === 0) return null; // LeetCode never calls these on an empty stack
+        ops.push({ kind: other[1] });
+        if (other[1] === 'pop') height--;
+      } else {
+        return null;
+      }
+    }
+    return ops;
+  }
+
+  function renderStacks(st) {
+    const h = st.values.length;
+    let html = '<span></span><span class="head">values</span><span class="head">mins</span><span></span>';
+    if (st.gone) {
+      html += `<span class="side"></span><span class="cell gone">${st.gone.v}</span><span class="cell gone">${st.gone.m}</span><span class="note bad">← atıldı</span>`;
+    }
+    if (h === 0 && !st.gone) html += '<span></span><p class="empty-note span">Yığınlar boş.</p>';
+    for (let i = h - 1; i >= 0; i--) {
+      let note = '';
+      let noteCls = 'note';
+      let vCls = 'cell';
+      let vState = 'plain';
+      if (i === h - 1 && st.newCol === 'v') { vState = 'new'; note = '← yeni'; noteCls = 'note new'; }
+      if (st.probe && st.probe.col === 'v' && st.probe.level === i) { vCls += ' probe'; note = '← Peek()'; noteCls = 'note'; }
+
+      let mCls = 'cell';
+      let mState = 'plain';
+      let mText = '?';
+      if (i >= st.mins.length) mCls += ' pending';
+      else {
+        mText = st.mins[i];
+        const isTop = i === st.mins.length - 1;
+        if (isTop && st.newCol === 'm') { mState = 'new'; note = '← yeni not'; noteCls = 'note new'; }
+        else if (isTop) mState = 'min';
+        if (st.probe && st.probe.col === 'm' && st.probe.level === i) { mCls += ' probe'; note = '← Peek()'; noteCls = 'note'; }
+      }
+
+      html += `<span class="side">${i === h - 1 ? 'tepe' : ''}</span>` +
+        `<span class="${vCls}" data-state="${vState}">${st.values[i]}</span>` +
+        `<span class="${mCls}" data-state="${mState}">${mText}</span>` +
+        `<span class="${noteCls}">${note}</span>`;
+    }
+    html += '<span></span><div class="floor" aria-hidden="true"></div><span></span>';
+    return html;
+  }
+
+  function render() {
+    const st = steps[idx];
+
+    $('calls').innerHTML = st.calls.map((label, k) => {
+      const r = st.results[k];
+      const res = r === undefined ? '' : r === null ? 'null' : r;
+      const state = k === st.call ? ' now' : k < st.call ? ' done' : '';
+      return `<div class="call${state}"><span class="op">${label}</span><span class="res${typeof r === 'number' ? ' num' : ''}">${res}</span></div>`;
+    }).join('');
+
+    $('stacks').innerHTML = renderStacks(st);
+
+    const vars = [['val', st.val], ['values.Count', st.values.length], ['mins.Count', st.mins.length]];
+    $('vars').innerHTML = vars.map(([name, v]) =>
+      `<div class="var${st.changed.includes(name) ? ' changed' : ''}"><dt>${name}</dt><dd>${v === undefined ? '—' : v}</dd></div>`).join('');
+
+    Object.keys(codeLines).forEach((id) => codeLines[id].classList.toggle('hl', st.lines.includes(id)));
+
+    const [tagText, tagKind] = TAGS[st.kind];
+    $('step-count').textContent = `Adım ${idx + 1} / ${steps.length}`;
+    $('step-tag').textContent = tagText;
+    $('step-tag').dataset.kind = tagKind;
+    $('step-text').innerHTML = st.text;
+    $('prev-btn').disabled = idx === 0;
+    $('reset').disabled = idx === 0;
+    $('next-btn').disabled = idx === steps.length - 1;
+
+    document.querySelectorAll('.presets button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.l === listText)));
+  }
+
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    $('play').textContent = '▶ Oynat';
+  }
+
+  function restart(text, ops) {
+    stop();
+    listText = text;
+    steps = buildSteps(ops);
+    idx = 0;
+    render();
+  }
+
+  $('next-btn').addEventListener('click', () => { stop(); if (idx < steps.length - 1) { idx++; render(); } });
+  $('prev-btn').addEventListener('click', () => { stop(); if (idx > 0) { idx--; render(); } });
+  $('reset').addEventListener('click', () => { stop(); idx = 0; render(); });
+  $('play').addEventListener('click', () => {
+    if (timer) { stop(); return; }
+    if (idx === steps.length - 1) { idx = 0; render(); }
+    $('play').textContent = '❚❚ Durdur';
+    timer = setInterval(() => {
+      if (idx < steps.length - 1) { idx++; render(); }
+      if (idx === steps.length - 1) stop();
+    }, 1100);
+  });
+  document.querySelectorAll('.presets button').forEach((b) => b.addEventListener('click', () => {
+    $('list').value = b.dataset.l;
+    $('list-err').hidden = true;
+    restart(b.dataset.l, parse(b.dataset.l));
+  }));
+  $('list').addEventListener('input', (e) => {
+    const ops = parse(e.target.value);
+    if (!ops) { $('list-err').hidden = false; return; }
+    $('list-err').hidden = true;
+    restart(e.target.value, ops);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next-btn').click();
+    else if (e.key === 'ArrowLeft') $('prev-btn').click();
+  });
+
+  restart(listText, parse(listText));
+})();
+</script>
+</body>
+</html>
