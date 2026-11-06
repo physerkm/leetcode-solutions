@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Eksik Sayıyı Bulmak</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: one reading column; the stepper is a single tool panel (controls, step card, array, 0..n row, then variables + sums | code) that stacks on phones. */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --ink: #141b26;
+  --muted: #5a6779;
+  --line: #d6dce6;
+  --accent: #3346c8;
+  --accent-ink: #ffffff;
+  --range: #e3e9fb;
+  --range-ink: #1d2a6b;
+  --good: #17824a;
+  --miss: #b86a00;
+  --miss-soft: #fdeccc;
+  --miss-soft-ink: #6b3d00;
+  --bad: #b8402a;
+  --code-bg: #f7f8fb;
+  --code-hl: #dfe5fb;
+  --kw: #7a3aa8;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+    --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+    --good: #3fbf7a; --miss: #e6a23c; --miss-soft: #3a2a10; --miss-soft-ink: #f5c77a; --bad: #ff7d66;
+    --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+  --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+  --good: #3fbf7a; --miss: #e6a23c; --miss-soft: #3a2a10; --miss-soft-ink: #f5c77a; --bad: #ff7d66;
+  --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0;
+  color-scheme: dark;
+}
+
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
+.wrap {
+  max-width: 1040px; margin: 0 auto;
+  padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px;
+}
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--muted); margin: 0; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 6vw, 54px); line-height: 1.05; letter-spacing: -.02em; margin: 8px 0 14px; text-wrap: balance; }
+.lead { color: var(--muted); margin: 0; font-size: 17px; }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -.01em; margin: 0 0 18px; text-wrap: balance; }
+code { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+
+/* Idea */
+.idea { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; list-style: none; padding: 0; margin: 0; }
+.idea li { border-top: 2px solid var(--ink); padding-top: 12px; min-width: 0; }
+.idea .n { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.idea h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 2px 0 6px; text-wrap: balance; }
+.idea p { margin: 0; color: var(--muted); font-size: 15px; }
+@media (max-width: 760px) { .idea { grid-template-columns: 1fr; gap: 20px; } }
+
+/* Stepper panel */
+.stepper { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+@media (max-width: 560px) { .stepper { padding: 16px; } }
+.stepper h2 { margin: 0; }
+.controls { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+.field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+input[type="text"] { width: 16em; max-width: 100%; box-sizing: border-box; font: 600 18px var(--font-mono); padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.err { margin: 0; font-size: 13px; color: var(--bad); }
+button { font: 500 14px var(--font-body); padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .4; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.presets button { font-size: 13px; padding: 7px 10px; }
+.presets .mono { font-family: var(--font-mono); font-weight: 700; margin-right: 4px; }
+.presets button[aria-pressed="true"] { border-color: var(--accent); background: var(--range); color: var(--range-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav { display: flex; flex-wrap: wrap; gap: 8px; }
+#play { min-width: 7.5em; }
+
+.step { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+.step-meta { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag { font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--range); color: var(--range-ink); }
+.tag[data-kind="ok"] { background: var(--good); color: var(--surface); }
+#step-text { margin: 8px 0 0; font-size: 16.5px; max-width: 78ch; min-height: 3.2em; }
+
+.panel-label { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 8px; }
+.panel-label small { font-weight: 400; font-size: 13px; }
+
+/* Array and the 0..n row share one look: a box per number. */
+.arr-scroll { overflow-x: auto; padding: 4px 6px 6px; }
+.arr { display: flex; gap: 8px; width: max-content; }
+.cell { display: flex; flex-direction: column; align-items: center; width: 52px; }
+.tags { display: flex; align-items: flex-end; justify-content: center; min-height: 22px; padding-bottom: 6px; font: 600 11px/1.35 var(--font-mono); color: var(--ink); }
+.box {
+  width: 52px; height: 46px; box-sizing: border-box; border-radius: 10px;
+  display: grid; place-items: center;
+  font: 700 18px var(--font-mono); font-variant-numeric: tabular-nums;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  transition: background-color .2s, color .2s, border-color .2s;
+}
+.box[data-state="added"] { background: var(--range); color: var(--range-ink); border-color: transparent; }
+.box[data-state="missing"] { background: var(--miss-soft); color: var(--miss-soft-ink); border: 2px solid var(--miss); }
+.box.reading { outline: 2px dashed var(--muted); outline-offset: 3px; }
+.box.target { outline: 2px solid var(--accent); outline-offset: 3px; }
+.chips .box { border-style: dashed; }
+.chips .box[data-state="added"] { border-style: solid; }
+@media (prefers-reduced-motion: reduce) { .box { transition: none; } }
+.idx { margin-top: 8px; font: 500 12px var(--font-mono); color: var(--muted); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin-top: 6px; }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; border: 1px solid var(--line); }
+.sw.added { background: var(--range); border-color: transparent; }
+.sw.missing { background: var(--miss-soft); border: 2px solid var(--miss); }
+.sw.reading { background: transparent; border: 2px dashed var(--muted); }
+.sw.target { background: transparent; border: 2px solid var(--accent); }
+
+/* Variables + sums | code */
+.board { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 28px; }
+@media (max-width: 880px) { .board { grid-template-columns: 1fr; } }
+.col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.vars { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.var { border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; background: var(--bg); min-width: 0; }
+.var dt { font: 400 12px var(--font-mono); color: var(--muted); }
+.var dd { margin: 0; font: 600 18px var(--font-mono); font-variant-numeric: tabular-nums; }
+.var.changed { border-color: var(--accent); background: var(--range); }
+.var.changed dd { color: var(--range-ink); }
+.sums { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 0; background: var(--bg); }
+.sum-row { display: grid; grid-template-columns: 7.2em minmax(0, 1fr) auto; gap: 10px; align-items: baseline; padding: 4px 12px; border-left: 3px solid transparent; font: 14px/1.5 var(--font-mono); font-variant-numeric: tabular-nums; }
+.sum-row.changed { background: var(--range); border-left-color: var(--accent); }
+.sum-row .k { color: var(--muted); font-size: 12px; }
+.sum-row .terms { overflow-wrap: anywhere; }
+.sum-row .v { font-weight: 700; }
+.sum-row.changed .terms, .sum-row.changed .v { color: var(--range-ink); }
+.out { margin-top: 4px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--bg); }
+.out.changed { border: 2px solid var(--miss); background: var(--miss-soft); }
+.out span { display: block; font: 400 12px var(--font-mono); color: var(--muted); }
+.out b { font: 700 18px var(--font-mono); overflow-wrap: anywhere; }
+.out.changed b { color: var(--miss-soft-ink); }
+.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 0; overflow-x: auto; font: 13px/1.6 var(--font-mono); }
+@media (max-width: 560px) { .code { font-size: 12px; } }
+.ln { display: block; padding: 0 14px 0 11px; white-space: pre; border-left: 3px solid transparent; }
+.ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
+.kw { color: var(--kw); }
+
+/* Two columns keep lines short enough to read while still using the page width. */
+.why-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; }
+.why-grid > div { border-top: 1px solid var(--line); padding-top: 12px; min-width: 0; }
+.why h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 0 0 6px; text-wrap: balance; }
+.why p { margin: 0; color: var(--muted); }
+.why b { color: var(--ink); }
+.gauss { margin: 10px 0 0; padding: 8px 12px; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; font: 14px/1.6 var(--font-mono); color: var(--ink); white-space: pre; overflow-x: auto; }
+@media (max-width: 760px) { .why-grid { grid-template-columns: 1fr; gap: 20px; } }
+.foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+.foot a { color: var(--accent); }
+
+/* No ligatures: `>` and `-` combos should look the way they are typed.
+   Kept last because the `font` shorthand above would reset it. */
+code, .code, .box, .var dd, .sum-row, .out b, .gauss, input[type="text"] { font-variant-ligatures: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">LeetCode 268 · Missing Number · Easy</p>
+    <h1>Eksik Sayıyı Bulmak</h1>
+    <p class="lead">Çözümün her adımını burada izleyebilirsin. Bir dizi seç, <b>İleri</b>'ye bas ya da <b>Oynat</b>'a tıkla; dizinin toplamının nasıl oluştuğunu ve olması gereken toplamla arasındaki farkın eksik sayıyı nasıl verdiğini gör.</p>
+  </header>
+
+  <section aria-labelledby="idea-h">
+    <h2 id="idea-h">Fikir üç adımda</h2>
+    <ol class="idea">
+      <li>
+        <span class="n">1</span>
+        <h3>Hiçbiri eksik olmasaydı toplam ne olurdu?</h3>
+        <p>Dizinin uzunluğu n ise sayılar 0 ile n arasında. Hepsi olsaydı toplam <code>0 + 1 + … + n</code> olurdu. Bunu döngüyle toplamaya gerek yok; formülü var: <code>n * (n + 1) / 2</code>.</p>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <h3>Dizideki sayıları topla</h3>
+        <p>Diziyi bir kez gezip her elemanı <code>actualSum</code>'a ekliyoruz. Hangi sayıları gördüğümüzü ayrıca kaydetmeye gerek yok.</p>
+      </li>
+      <li>
+        <span class="n">3</span>
+        <h3>Fark, eksik sayının kendisi</h3>
+        <p>Eksik sayı dışındaki her sayı iki toplamda da var ve çıkarınca birbirini götürüyor. Geriye kalan <code>expectedSum - actualSum</code>, eksik sayı.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="stepper" aria-labelledby="st-h">
+    <h2 id="st-h">Adım adım izle</h2>
+
+    <div class="controls">
+      <div class="row">
+        <div class="field">
+          <label for="list">Dizi (virgülle ayır, en fazla 10 sayı)</label>
+          <input id="list" type="text" value="3, 0, 1" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="nav">
+          <button type="button" id="reset">Baştan</button>
+          <button type="button" id="prev-btn">← Geri</button>
+          <button type="button" id="next-btn" class="primary">İleri →</button>
+          <button type="button" id="play">▶ Oynat</button>
+        </div>
+      </div>
+      <div class="presets" role="group" aria-label="Hazır örnekler">
+        <button type="button" data-l="3, 0, 1"><span class="mono">[3,0,1]</span></button>
+        <button type="button" data-l="0, 1"><span class="mono">[0,1]</span>eksik olan n</button>
+        <button type="button" data-l="3, 1, 2"><span class="mono">[3,1,2]</span>eksik olan 0</button>
+        <button type="button" data-l="9, 6, 4, 2, 3, 5, 7, 0, 1"><span class="mono">[9,6,4,2,3,5,7,0,1]</span></button>
+      </div>
+      <p class="err" id="list-err" hidden>Virgülle ayrılmış en az 1, en fazla 10 tam sayı yaz. Sayılar 0 ile dizinin uzunluğu arasında olmalı ve tekrar etmemeli; örneğin 3 elemanlı bir dizide 0, 1, 2 ve 3'ten üçü olabilir.</p>
+    </div>
+
+    <div class="step" aria-live="polite">
+      <div class="step-meta"><span id="step-count"></span><span id="step-tag" class="tag"></span></div>
+      <p id="step-text"></p>
+    </div>
+
+    <div>
+      <p class="panel-label">nums</p>
+      <div class="arr-scroll"><div class="arr" id="arr"></div></div>
+    </div>
+
+    <div>
+      <p class="panel-label">0'dan n'e kadar olması gereken sayılar <small>(sadece gösterim için; kod bunları tutmuyor)</small></p>
+      <div class="arr-scroll"><div class="arr chips" id="chips"></div></div>
+      <div class="legend">
+        <span><i class="sw added"></i>toplandı</span>
+        <span><i class="sw reading"></i>okunan eleman (num)</span>
+        <span><i class="sw target"></i>num'un 0..n içindeki yeri</span>
+        <span><i class="sw missing"></i>eksik sayı</span>
+      </div>
+    </div>
+
+    <div class="board">
+      <div class="col">
+        <p class="panel-label">Değişkenler</p>
+        <dl class="vars" id="vars"></dl>
+        <div class="sums" id="sums"></div>
+        <div class="out" id="out"><span>return expectedSum - actualSum</span><b id="result"></b></div>
+      </div>
+      <div class="col">
+        <p class="panel-label">Kod (Solution.cs içindeki metot)</p>
+        <div class="code" id="code" role="region" aria-label="C# kodu" tabindex="0"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-h">
+    <h2 id="why-h">Neden O(n) zaman ve O(1) bellek?</h2>
+    <div class="why-grid">
+      <div>
+        <h3>O(n) zaman</h3>
+        <p>Diziyi sadece bir kez geziyoruz. Olması gereken toplam ise formülle tek bir işlemde bulunuyor, onun için döngü yok. Dizi ne kadar uzunsa iş de o oranda artar: <b>O(n) zaman</b>.</p>
+      </div>
+      <div>
+        <h3>O(1) bellek</h3>
+        <p>Dizi kaç elemanlı olursa olsun sadece dört değişken tutuyoruz: <code>n</code>, <code>expectedSum</code>, <code>actualSum</code> ve <code>num</code>. Hangi sayıları gördüğümüzü kaydeden bir dizi ya da küme yok: <b>O(1) bellek</b>.</p>
+      </div>
+      <div>
+        <h3>Formül nereden geliyor?</h3>
+        <p>0'dan n'e kadar sayıları bir kez düz, bir kez ters sırayla alt alta yaz. Her sütunun toplamı n eder ve n + 1 sütun vardır. İki satırın toplamı <b>n · (n + 1)</b> olur. Her sayıyı iki kez saydığımız için 2'ye bölüyoruz.</p>
+        <div class="gauss">  0 + 1 + 2 + 3
++ 3 + 2 + 1 + 0
+───────────────
+  3 + 3 + 3 + 3 = 3 · 4 = 12
+
+12 / 2 = 6</div>
+      </div>
+      <div>
+        <h3>Taşma (overflow) olur mu?</h3>
+        <p><code>int</code> en fazla 2.147.483.647 tutabilir. Bu soruda n en fazla 10.000, yani olması gereken toplam en fazla 50.005.000; rahatça sığar. n 46.341 ya da daha büyük olsaydı <code>n * (n + 1)</code> çarpımı <code>int</code>'e sığmazdı ve <code>long</code> kullanmak gerekirdi.</p>
+      </div>
+      <div>
+        <h3>Eksik sayı 0 ise ne olur?</h3>
+        <p>0 toplama hiçbir şey katmaz. 0 eksikse iki toplam birbirine eşit çıkar ve fark <b>0</b> olur; cevap yine doğru. Örneğin <code>[3, 1, 2]</code>: 6 − 6 = 0. Yukarıdaki hazır örneklerden izleyebilirsin.</p>
+      </div>
+      <div>
+        <h3>Başka yollar</h3>
+        <p>Diziyi sıralayıp sayıların kaydığı yere bakmak da doğru çalışır ama sıralama <b>O(n log n)</b> sürer. Görülen sayıları <code>HashSet</code> ya da <code>bool[]</code> ile işaretlemek O(n) zamanda çalışır ama <b>O(n) bellek</b> ister. XOR ile de O(n) zaman ve O(1) bellekte çözülür; ama toplama yöntemi daha kısa ve okuması daha kolay.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <a href="https://leetcode.com/problems/missing-number/">Soru: LeetCode 268</a>
+    <a href="https://github.com/physerkm/leetcode-solutions/blob/main/src/LeetCode/Problems/P0268_MissingNumber/Solution.cs">Kod: Solution.cs</a>
+    <a href="../">Tüm anlatımlar</a>
+    <a href="https://github.com/physerkm/leetcode-solutions">Repo: physerkm/leetcode-solutions</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const MAX_LEN = 10;
+
+  // Turkish "to k" suffix depends on how the number is read: 3'e, 2'ye, 6'ya, 10'a.
+  const DATIVE = ["'a", "'e", "'ye", "'e", "'e", "'e", "'ya", "'ye", "'e", "'a", "'a"];
+  const toNum = (k) => `${k}${DATIVE[k]}`;
+
+  // Steps: mirrors Solution.cs line by line.
+  // readAt: the array index being read; target: where num sits in the 0..n row; missing: shown only at the end.
+  function buildSteps(vals) {
+    const len = vals.length;
+    const steps = [];
+    let n;
+    let expectedSum;
+    let actualSum;
+    let num;
+    let result;
+    const terms = [];
+    const added = [];
+    const snap = (s) => steps.push({
+      n, expectedSum, actualSum, num, result, terms: terms.slice(), added: added.slice(),
+      readAt: -1, target: -1, missing: -1, changed: [], ...s,
+    });
+
+    const all = Array.from({ length: len + 1 }, (_, k) => k);
+    snap({
+      kind: 'start', lines: [],
+      text: `Dizide ${len} eleman var. 0'dan ${toNum(len)} kadar ise ${len + 1} sayı var (${all.join(', ')}), yani bunlardan biri eksik. Kod eksik sayıyı tek tek aramayacak; iki toplamı karşılaştıracak.`,
+    });
+
+    n = len;
+    snap({
+      kind: 'n', lines: ['n'], changed: ['n'],
+      text: `<code>n = nums.Length</code> → ${n}. Sayılar 0 ile ${n} arasında.`,
+    });
+
+    expectedSum = n * (n + 1) / 2;
+    snap({
+      kind: 'expected', lines: ['exp'], changed: ['expectedSum'],
+      text: `Hiçbir sayı eksik olmasaydı toplam <code>${all.join(' + ')}</code> olurdu. Formül bunu döngüsüz veriyor: <code>n * (n + 1) / 2</code> = ${n} · ${n + 1} / 2 = ${expectedSum}.`,
+    });
+
+    actualSum = 0;
+    snap({
+      kind: 'init', lines: ['act'], changed: ['actualSum'],
+      text: 'Şimdi dizideki sayıları toplayacağız. <code>actualSum</code> 0\'dan başlıyor.',
+    });
+
+    for (let j = 0; j < len; j++) {
+      num = vals[j];
+      const before = actualSum;
+      actualSum += num;
+      terms.push(num);
+      added.push(j);
+      snap({
+        kind: 'add', lines: ['foreach', 'add'], changed: ['num', 'actualSum'], readAt: j, target: num,
+        text: `Sıradaki eleman <code>num = ${num}</code>. <code>actualSum += ${num}</code> → ${before} + ${num} = ${actualSum}.` +
+          (num === 0 ? ' 0 eklemek toplamı değiştirmiyor.' : ''),
+      });
+    }
+
+    // num only lives inside the foreach.
+    num = undefined;
+    result = expectedSum - actualSum;
+    let note;
+    if (result === 0) {
+      note = ' İki toplam eşit çıktı, çünkü eksik sayı 0: 0 toplama hiçbir şey katmadığı için onun yokluğu toplamı değiştirmiyor.';
+    } else if (result === n) {
+      note = ` Eksik sayı n'in kendisi: dizide hiçbir şey yerinden oynamamış gibi görünse de ${n} yok.`;
+    } else {
+      note = '';
+    }
+    snap({
+      kind: 'done', lines: ['ret'], changed: ['result'], missing: result,
+      text: `Döngü bitti. Olması gereken toplam ${expectedSum}, dizinin toplamı ${actualSum}. <code>return expectedSum - actualSum</code> → ${expectedSum} − ${actualSum} = <b>${result}</b>. ${result} dışındaki her sayı iki toplamda da var ve birbirini götürüyor.` + note,
+    });
+    return steps;
+  }
+
+  // Rendering
+  const CODE = [
+    ['n', '<span class="kw">int</span> n = nums.Length;'],
+    ['exp', '<span class="kw">int</span> expectedSum = n * (n + 1) / 2;'],
+    ['', ''],
+    ['act', '<span class="kw">int</span> actualSum = 0;'],
+    ['foreach', '<span class="kw">foreach</span> (<span class="kw">int</span> num <span class="kw">in</span> nums)'],
+    ['', '{'],
+    ['add', '    actualSum += num;'],
+    ['', '}'],
+    ['', ''],
+    ['ret', '<span class="kw">return</span> expectedSum - actualSum;'],
+  ];
+  $('code').innerHTML = CODE.map(([id, html]) => `<span class="ln"${id ? ` data-id="${id}"` : ''}>${html || ' '}</span>`).join('');
+  const codeLines = {};
+  document.querySelectorAll('.ln[data-id]').forEach((el) => { codeLines[el.dataset.id] = el; });
+
+  const TAGS = {
+    start: ['Başlangıç', ''], n: ['n', ''], expected: ['Olması gereken toplam', ''],
+    init: ['Toplamaya başla', ''], add: ['Topla', ''], done: ['Bitti', 'ok'],
+  };
+
+  let listText = '3, 0, 1';
+  let vals = [];
+  let steps = [];
+  let idx = 0;
+  let timer = null;
+
+  function parse(raw) {
+    const parts = raw.split(/[\s,]+/).filter(Boolean);
+    if (parts.length === 0 || parts.length > MAX_LEN) return null;
+    const out = parts.map(Number);
+    if (!out.every((v) => Number.isInteger(v) && v >= 0 && v <= out.length)) return null;
+    return new Set(out).size === out.length ? out : null;
+  }
+
+  const show = (v) => (v === undefined ? '—' : String(v));
+
+  function render() {
+    const st = steps[idx];
+    const len = vals.length;
+
+    let html = '';
+    for (let j = 0; j < len; j++) {
+      const state = st.added.includes(j) ? 'added' : 'plain';
+      const reading = j === st.readAt;
+      html += `<div class="cell"><div class="tags">${reading ? 'num' : ''}</div>` +
+        `<div class="box${reading ? ' reading' : ''}" data-state="${state}">${vals[j]}</div>` +
+        `<div class="idx">[${j}]</div></div>`;
+    }
+    $('arr').innerHTML = html;
+
+    html = '';
+    for (let v = 0; v <= len; v++) {
+      const state = v === st.missing ? 'missing' : st.terms.includes(v) ? 'added' : 'plain';
+      const label = v === st.missing ? 'eksik' : '';
+      html += `<div class="cell"><div class="tags">${label}</div>` +
+        `<div class="box${v === st.target ? ' target' : ''}" data-state="${state}">${v}</div></div>`;
+    }
+    $('chips').innerHTML = html;
+
+    const vars = [['n', st.n], ['expectedSum', st.expectedSum], ['num', st.num], ['actualSum', st.actualSum]];
+    $('vars').innerHTML = vars.map(([name, v]) =>
+      `<div class="var${st.changed.includes(name) ? ' changed' : ''}"><dt>${name}</dt><dd>${show(v)}</dd></div>`).join('');
+
+    const expTerms = st.expectedSum === undefined ? '—' : Array.from({ length: st.n + 1 }, (_, k) => k).join(' + ');
+    const actTerms = st.actualSum === undefined ? '—' : st.terms.length === 0 ? '0' : st.terms.join(' + ');
+    const sumRow = (name, terms, v) =>
+      `<div class="sum-row${st.changed.includes(name) ? ' changed' : ''}"><span class="k">${name}</span>` +
+      `<span class="terms">${terms}</span><span class="v">${v === undefined ? '' : '= ' + v}</span></div>`;
+    $('sums').innerHTML = sumRow('expectedSum', expTerms, st.expectedSum) + sumRow('actualSum', actTerms, st.actualSum);
+
+    $('result').textContent = st.result === undefined ? '—' : `${st.expectedSum} − ${st.actualSum} = ${st.result}`;
+    $('out').classList.toggle('changed', st.changed.includes('result'));
+
+    Object.keys(codeLines).forEach((id) => codeLines[id].classList.toggle('hl', st.lines.includes(id)));
+
+    const [tagText, tagKind] = TAGS[st.kind];
+    $('step-count').textContent = `Adım ${idx + 1} / ${steps.length}`;
+    $('step-tag').textContent = tagText;
+    $('step-tag').dataset.kind = tagKind;
+    $('step-text').innerHTML = st.text;
+    $('prev-btn').disabled = idx === 0;
+    $('reset').disabled = idx === 0;
+    $('next-btn').disabled = idx === steps.length - 1;
+
+    document.querySelectorAll('.presets button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.l === listText)));
+  }
+
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    $('play').textContent = '▶ Oynat';
+  }
+
+  function restart(text, parsed) {
+    stop();
+    listText = text;
+    vals = parsed;
+    steps = buildSteps(vals);
+    idx = 0;
+    render();
+  }
+
+  $('next-btn').addEventListener('click', () => { stop(); if (idx < steps.length - 1) { idx++; render(); } });
+  $('prev-btn').addEventListener('click', () => { stop(); if (idx > 0) { idx--; render(); } });
+  $('reset').addEventListener('click', () => { stop(); idx = 0; render(); });
+  $('play').addEventListener('click', () => {
+    if (timer) { stop(); return; }
+    if (idx === steps.length - 1) { idx = 0; render(); }
+    $('play').textContent = '❚❚ Durdur';
+    timer = setInterval(() => {
+      if (idx < steps.length - 1) { idx++; render(); }
+      if (idx === steps.length - 1) stop();
+    }, 1100);
+  });
+  document.querySelectorAll('.presets button').forEach((b) => b.addEventListener('click', () => {
+    $('list').value = b.dataset.l;
+    $('list-err').hidden = true;
+    restart(b.dataset.l, parse(b.dataset.l));
+  }));
+  $('list').addEventListener('input', (e) => {
+    const parsed = parse(e.target.value);
+    if (!parsed) { $('list-err').hidden = false; return; }
+    $('list-err').hidden = true;
+    restart(e.target.value, parsed);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next-btn').click();
+    else if (e.key === 'ArrowLeft') $('prev-btn').click();
+  });
+
+  restart(listText, parse(listText));
+})();
+</script>
+</body>
+</html>

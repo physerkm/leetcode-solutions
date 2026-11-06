@@ -14,6 +14,7 @@ LeetCode'da çözdüğüm soruların C# çözümleri.
 | 155 | [Min Stack](https://leetcode.com/problems/min-stack/) | Medium | [C#](src/LeetCode/Problems/P0155_MinStack/MinStack.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0155_MinStack/) |
 | 206 | [Reverse Linked List](https://leetcode.com/problems/reverse-linked-list/) | Easy | [C#](src/LeetCode/Problems/P0206_ReverseLinkedList/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0206_ReverseLinkedList/) |
 | 238 | [Product of Array Except Self](https://leetcode.com/problems/product-of-array-except-self/) | Medium | [C#](src/LeetCode/Problems/P0238_ProductOfArrayExceptSelf/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0238_ProductOfArrayExceptSelf/) · [Video](https://physerkm.github.io/leetcode-solutions/P0238_ProductOfArrayExceptSelf/#video) |
+| 268 | [Missing Number](https://leetcode.com/problems/missing-number/) | Easy | [C#](src/LeetCode/Problems/P0268_MissingNumber/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0268_MissingNumber/) |
 | 448 | [Find All Numbers Disappeared in an Array](https://leetcode.com/problems/find-all-numbers-disappeared-in-an-array/) | Easy | [C#](src/LeetCode/Problems/P0448_FindAllNumbersDisappearedInAnArray/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0448_FindAllNumbersDisappearedInAnArray/) |
 
 ## Nasıl çalıştırılır
