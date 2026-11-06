@@ -285,8 +285,8 @@ code, .code, .box, .var dd, .out b, .past, input[type="text"] { font-variant-lig
         <p>Her kutudan her zıplamayı denemek doğru çalışır ama yol sayısı çok hızlı büyür; testteki 10.000 elemanlı dizide yaklaşık 2<sup>9998</sup> yol var. Her kutu için "buraya ulaşılabilir mi?" bilgisini bir dizide tutmak da doğru çalışır ama <b>O(n²) zaman</b> ve <b>O(n) bellek</b> ister. Sondan başa doğru giden bir çözüm de O(n) zaman ve O(1) bellekte çalışır; bu sayfadaki baştan sona yöntemi daha kolay anlaşılıyor.</p>
       </div>
       <div>
-        <h3>Sondaki <code>return false</code> neden hiç çalışmıyor?</h3>
-        <p>Döngünün son turunda <code>i</code> son index'e eşit. O turda ya <code>i &gt; farthest</code> olur ve <code>false</code> döner, ya da <code>farthest</code> en az <code>i</code> olur ve <code>true</code> döner. Yani döngü hep içeriden biter. Ama C# derleyicisi bunu kendi başına çıkaramıyor ve metodun sonunda bir <code>return</code> istiyor.</p>
+        <h3>Sondaki <code>return false</code> neden var?</h3>
+        <p>C# derleyicisi, metodun her yolda bir <code>bool</code> döndürdüğünü görmek istiyor. Değişkenlerin değerlerine bakmadığı için döngünün normal bitip en alta inebileceğini düşünüyor; bu satırı silersen kod derlenmez. Gerçekte buraya sadece boş bir dizi gelir, LeetCode ise en az 1 eleman garanti ediyor. O zaman döngünün son turunda <code>i</code> son index'e eşit olur: ya <code>i &gt; farthest</code> olur ve <code>false</code> döner, ya da <code>farthest</code> en az <code>i</code> olur ve <code>true</code> döner.</p>
       </div>
     </div>
   </section>
@@ -382,7 +382,7 @@ code, .code, .box, .var dd, .out b, .past, input[type="text"] { font-variant-lig
         return steps;
       }
     }
-    return steps; // not reached: the loop always returns, just like Solution.cs
+    return steps; // not reached: the input needs at least one number, so the loop always returns
   }
 
   // Rendering
@@ -402,7 +402,7 @@ code, .code, .box, .var dd, .out b, .past, input[type="text"] { font-variant-lig
     ['retT', '        <span class="kw">return</span> <span class="kw">true</span>;'],
     ['', '}'],
     ['', ''],
-    ['', '<span class="kw">return</span> <span class="kw">false</span>; <span class="cm">// buraya hiç gelinmez</span>'],
+    ['', '<span class="kw">return</span> <span class="kw">false</span>; <span class="cm">// sadece boş dizide gelinir</span>'],
   ];
   $('code').innerHTML = CODE.map(([id, html]) => `<span class="ln"${id ? ` data-id="${id}"` : ''}>${html || ' '}</span>`).join('');
   const codeLines = {};

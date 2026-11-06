@@ -25,7 +25,8 @@ public class Solution
                 return true;
         }
 
-        // Never runs: the loop's last turn always returns. C# still needs a return here.
+        // Only an empty array gets here. LeetCode gives at least one element, and then
+        // the loop's last turn always returns. C# still needs a return at the end.
         return false;
     }
 }
