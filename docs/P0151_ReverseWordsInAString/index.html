@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kelimelerin Sırasını Çevirmek</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: one reading column; the stepper is a single tool panel (controls, step card, then three rows:
+   the input s, the words array, the result being joined; then variables + return value | code) that stacks on phones. */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --ink: #141b26;
+  --muted: #5a6779;
+  --line: #d6dce6;
+  --accent: #3346c8;
+  --accent-ink: #ffffff;
+  --range: #e3e9fb;
+  --range-ink: #1d2a6b;
+  --good: #17824a;
+  --good-soft: #dcf1e4;
+  --good-soft-ink: #145c36;
+  --bad: #b8402a;
+  --bad-soft: #f9e3dd;
+  --bad-soft-ink: #7a2615;
+  --code-bg: #f7f8fb;
+  --code-hl: #dfe5fb;
+  --kw: #7a3aa8;
+  --str: #17824a;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+    --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+    --good: #3fbf7a; --good-soft: #14301f; --good-soft-ink: #8fe0b2;
+    --bad: #ff7d66; --bad-soft: #3a1c17; --bad-soft-ink: #ffb4a5;
+    --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0; --str: #8fe0b2;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+  --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+  --good: #3fbf7a; --good-soft: #14301f; --good-soft-ink: #8fe0b2;
+  --bad: #ff7d66; --bad-soft: #3a1c17; --bad-soft-ink: #ffb4a5;
+  --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0; --str: #8fe0b2;
+  color-scheme: dark;
+}
+
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
+.wrap {
+  max-width: 1040px; margin: 0 auto;
+  padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px;
+}
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--muted); margin: 0; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 6vw, 54px); line-height: 1.05; letter-spacing: -.02em; margin: 8px 0 14px; text-wrap: balance; }
+.lead { color: var(--muted); margin: 0; font-size: 17px; }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -.01em; margin: 0 0 18px; text-wrap: balance; }
+/* pre, not nowrap: the examples need their runs of spaces kept. */
+code { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; white-space: pre; }
+
+/* Idea */
+.idea { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; list-style: none; padding: 0; margin: 0; }
+.idea li { border-top: 2px solid var(--ink); padding-top: 12px; min-width: 0; }
+.idea .n { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.idea h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 2px 0 6px; text-wrap: balance; }
+.idea p { margin: 0; color: var(--muted); font-size: 15px; }
+@media (max-width: 760px) { .idea { grid-template-columns: 1fr; gap: 20px; } }
+
+/* Stepper panel */
+.stepper { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+@media (max-width: 560px) { .stepper { padding: 16px; } }
+.stepper h2 { margin: 0; }
+.controls { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+.field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+input[type="text"] { width: 18em; max-width: 100%; box-sizing: border-box; font: 600 18px var(--font-mono); padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); white-space: pre; }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.err { margin: 0; font-size: 13px; color: var(--bad); }
+button { font: 500 14px var(--font-body); padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .4; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.presets button { font-size: 13px; padding: 7px 10px; }
+.presets .mono { font-family: var(--font-mono); font-weight: 700; margin-right: 4px; white-space: pre; }
+.presets button[aria-pressed="true"] { border-color: var(--accent); background: var(--range); color: var(--range-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav { display: flex; flex-wrap: wrap; gap: 8px; }
+#play { min-width: 7.5em; }
+
+.step { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+.step-meta { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag { font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--range); color: var(--range-ink); }
+.tag[data-kind="ok"] { background: var(--good); color: var(--surface); }
+#step-text { margin: 8px 0 0; font-size: 16.5px; max-width: 78ch; min-height: 4.8em; }
+
+.panel-label { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 8px; }
+.panel-label code { font-weight: 500; }
+.lanes { display: flex; flex-direction: column; gap: 18px; }
+.empty { font-size: 14px; color: var(--muted); margin: 0; min-height: 32px; display: flex; align-items: center; }
+
+/* Character boxes: used for s and for the result. Spaces are drawn as a middle dot. */
+.chars { display: flex; flex-wrap: wrap; gap: 3px; }
+.ch {
+  width: 22px; height: 32px; box-sizing: border-box; border-radius: 6px;
+  display: grid; place-items: center; font: 600 15px var(--font-mono);
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  transition: background-color .2s, color .2s, opacity .2s;
+}
+.ch.sp { color: var(--muted); }
+.ch[data-st="done"] { opacity: .45; }
+.ch[data-st="piece"] { background: var(--range); color: var(--range-ink); border-color: transparent; }
+.ch[data-st="cut"] { border: 2px solid var(--accent); color: var(--accent); }
+.ch[data-st="skip"] { border: 2px solid var(--bad); background: var(--bad-soft); color: var(--bad-soft-ink); }
+.ch[data-st="new"] { background: var(--good-soft); color: var(--good-soft-ink); border-color: var(--good); }
+@media (prefers-reduced-motion: reduce) { .ch, .chip { transition: none; } }
+
+/* The words array: one column per word with an i/j label above and the index below. */
+.words { display: flex; flex-wrap: wrap; gap: 8px 10px; }
+.wcol { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.wlbl { min-height: 15px; font: 700 11px/15px var(--font-mono); color: var(--accent); white-space: nowrap; }
+.chip {
+  padding: 6px 10px; border-radius: 8px; font: 600 15px var(--font-mono);
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  transition: background-color .2s, color .2s, opacity .2s;
+}
+.chip[data-st="new"], .chip[data-st="cur"] { background: var(--good-soft); color: var(--good-soft-ink); border-color: var(--good); }
+.chip[data-st="swap"] { background: var(--range); color: var(--range-ink); border: 2px solid var(--accent); }
+.chip[data-st="mid"] { border: 2px dashed var(--accent); }
+.chip[data-st="used"] { opacity: .45; }
+.widx { font: 500 12px var(--font-mono); color: var(--muted); }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 6px; border: 1px solid var(--line); box-sizing: border-box; }
+.sw.piece { background: var(--range); border-color: transparent; }
+.sw.cut { border: 2px solid var(--accent); }
+.sw.skip { border: 2px solid var(--bad); background: var(--bad-soft); }
+.sw.new { border-color: var(--good); background: var(--good-soft); }
+.sw.swap { border: 2px solid var(--accent); background: var(--range); }
+
+/* Variables + return value | code */
+.board { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 28px; }
+@media (max-width: 880px) { .board { grid-template-columns: 1fr; } }
+.col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.vars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.var { border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; background: var(--bg); min-width: 0; }
+.var dt { font: 400 12px var(--font-mono); color: var(--muted); }
+.var dd { margin: 0; font: 600 18px var(--font-mono); font-variant-numeric: tabular-nums; }
+.var.changed { border-color: var(--accent); background: var(--range); }
+.var.changed dd { color: var(--range-ink); }
+.note { margin: 0; font-size: 13px; color: var(--muted); }
+.out { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--bg); min-width: 0; }
+.out span { display: block; font-size: 12px; color: var(--muted); }
+.out b { font: 700 17px var(--font-mono); overflow-wrap: anywhere; white-space: pre-wrap; }
+.out[data-kind="done"] { border: 2px solid var(--good); background: var(--good-soft); }
+.out[data-kind="done"] b { color: var(--good-soft-ink); }
+.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 0; overflow-x: auto; font: 13px/1.6 var(--font-mono); }
+@media (max-width: 560px) { .code { font-size: 12px; } }
+.ln { display: block; padding: 0 14px 0 11px; white-space: pre; border-left: 3px solid transparent; }
+.ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
+.kw { color: var(--kw); }
+.st { color: var(--str); }
+
+/* Two columns keep lines short enough to read while still using the page width. */
+.why-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; }
+.why-grid > div { border-top: 1px solid var(--line); padding-top: 12px; min-width: 0; }
+.why h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 0 0 6px; text-wrap: balance; }
+.why p { margin: 0; color: var(--muted); }
+.why b { color: var(--ink); }
+.snippet { margin: 10px 0 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; font: 12.5px/1.55 var(--font-mono); color: var(--ink); }
+@media (max-width: 760px) { .why-grid { grid-template-columns: 1fr; gap: 20px; } }
+.foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+.foot a { color: var(--accent); }
+
+/* No ligatures: `>=` and `&&` should look the way they are typed.
+   Kept last because the `font` shorthand above would reset it. */
+code, .code, .snippet, .ch, .chip, .var dd, .out b, input[type="text"] { font-variant-ligatures: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">LeetCode 151 · Reverse Words in a String · Medium</p>
+    <h1>Kelimelerin Sırasını Çevirmek</h1>
+    <p class="lead">Çözümün her adımını burada izleyebilirsin. Bir metin seç, <b>İleri</b>'ye bas ya da <b>Oynat</b>'a tıkla; çözümdeki üç hazır metodun, <code>Split</code>, <code>Array.Reverse</code> ve <code>string.Join</code>'in içeride ne yaptığını kutu kutu gör.</p>
+  </header>
+
+  <section aria-labelledby="idea-h">
+    <h2 id="idea-h">Fikir üç adımda</h2>
+    <ol class="idea">
+      <li>
+        <span class="n">1</span>
+        <h3>Boşluklardan kes, boş parçaları at</h3>
+        <p><code>Split(' ')</code> metni her boşlukta keser. Yan yana iki boşluk ya da baştaki ve sondaki boşluklar arada boş parçalar (<code>""</code>) bırakır; <code>RemoveEmptyEntries</code> bunları atar. Elde sadece kelimeler kalır.</p>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <h3>Kelime dizisini ters çevir</h3>
+        <p><code>Array.Reverse</code> ilk kelimeyle sonuncuyu, ikinciyle sondan ikinciyi yer değiştirir ve ortada buluşunca durur. Kelimelerin içindeki harflere dokunmaz.</p>
+      </li>
+      <li>
+        <span class="n">3</span>
+        <h3>Tek boşlukla birleştir</h3>
+        <p><code>string.Join(" ", words)</code> kelimelerin arasına tam bir boşluk koyar, başa ve sona hiç koymaz. Fazla boşluk sorunu böylece kendiliğinden çözülür.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="stepper" aria-labelledby="st-h">
+    <h2 id="st-h">Adım adım izle</h2>
+
+    <div class="controls">
+      <div class="row">
+        <div class="field">
+          <label for="list">Metin (harf, rakam ve boşluk; en fazla 30 karakter)</label>
+          <input id="list" type="text" value="a good   example" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="nav">
+          <button type="button" id="reset">Baştan</button>
+          <button type="button" id="prev-btn">← Geri</button>
+          <button type="button" id="next-btn" class="primary">İleri →</button>
+          <button type="button" id="play">▶ Oynat</button>
+        </div>
+      </div>
+      <div class="presets" role="group" aria-label="Hazır örnekler">
+        <button type="button" data-l="the sky is blue"><span class="mono">"the sky is blue"</span></button>
+        <button type="button" data-l="  hello world  "><span class="mono">"  hello world  "</span>baş ve sonda boşluk</button>
+        <button type="button" data-l="a good   example"><span class="mono">"a good   example"</span>arada fazla boşluk</button>
+        <button type="button" data-l="   hello   "><span class="mono">"   hello   "</span>tek kelime</button>
+      </div>
+      <p class="err" id="list-err" hidden>En fazla 30 karakter yaz: sadece İngilizce harf, rakam ve boşluk. En az bir kelime olmalı.</p>
+    </div>
+
+    <div class="step" aria-live="polite">
+      <div class="step-meta"><span id="step-count"></span><span id="step-tag" class="tag"></span></div>
+      <p id="step-text"></p>
+    </div>
+
+    <div class="lanes">
+      <div>
+        <p class="panel-label"><code>s</code> (boşluklar · ile gösteriliyor)</p>
+        <div class="chars" id="s-row"></div>
+      </div>
+      <div>
+        <p class="panel-label"><code>words</code> (Split'in ürettiği dizi)</p>
+        <div id="w-row"></div>
+      </div>
+      <div>
+        <p class="panel-label">Sonuç (Join'in yazdığı metin)</p>
+        <div id="r-row"></div>
+      </div>
+      <div class="legend">
+        <span><i class="sw piece"></i>okunan parça</span>
+        <span><i class="sw cut"></i>kesilen boşluk</span>
+        <span><i class="sw skip"></i>boş parça, atlanıyor</span>
+        <span><i class="sw swap"></i>yer değiştiren kelimeler</span>
+        <span><i class="sw new"></i>yeni eklenen</span>
+      </div>
+    </div>
+
+    <div class="board">
+      <div class="col">
+        <p class="panel-label">Değişkenler</p>
+        <dl class="vars" id="vars"></dl>
+        <p class="note"><code>i</code> ve <code>j</code>, <code>Array.Reverse</code>'ün içindeki sayaçlar; kodda görünmüyorlar.</p>
+        <div class="out" id="out"><span>dönüş değeri</span><b id="result"></b></div>
+      </div>
+      <div class="col">
+        <p class="panel-label">Kod (Solution.cs içindeki metot)</p>
+        <div class="code" id="code" role="region" aria-label="C# kodu" tabindex="0"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-h">
+    <h2 id="why-h">Neden O(n) zaman ve O(n) bellek?</h2>
+    <div class="why-grid">
+      <div>
+        <h3>O(n) zaman</h3>
+        <p><code>Split</code> metni bir kez baştan sona okur. <code>Array.Reverse</code>, m kelime için m / 2 kez yer değiştirir; m de metnin uzunluğunu geçemez. <code>string.Join</code> her harfi sonuca bir kez kopyalar. Üçü de metnin uzunluğuyla orantılı: <b>O(n) zaman</b>.</p>
+      </div>
+      <div>
+        <h3>O(n) bellek</h3>
+        <p>Kelimeler için bir dizi, her kelime için de yeni bir metin oluşuyor; sonuç da ayrı bir metin. Toplamı metnin uzunluğu kadar: <b>O(n) bellek</b>. C#'ta metinler değiştirilemediği için sonuç zaten yeni bir metin olmak zorunda, yani bu soru C#'ta O(n)'den az bellekle çözülemez.</p>
+      </div>
+      <div>
+        <h3><code>RemoveEmptyEntries</code> olmasaydı?</h3>
+        <p><code>"a good   example".Split(' ')</code> şunu verir: <code>["a", "good", "", "", "example"]</code>. Ters çevirip birleştirince boş parçalar da birer kelime gibi davranır ve araya fazladan boşluk girer: <code>"example   good a"</code>. <code>RemoveEmptyEntries</code> boş parçaları en baştan attığı için bu sorun hiç oluşmuyor.</p>
+      </div>
+      <div>
+        <h3><code>Array.Reverse</code> neden bir şey döndürmüyor?</h3>
+        <p>Çünkü diziyi <b>yerinde</b> değiştiriyor: yeni bir dizi oluşturmuyor, <code>words</code>'ün kendi kutularındaki kelimelerin yerini değiştiriyor. Dönüş türü bu yüzden <code>void</code>; <code>reversed = Array.Reverse(words)</code> gibi bir satır derlenmez. İçeride iki uçtan başlayan iki sayaçla (<code>i</code> ve <code>j</code>) çalışır; Sort Colors'taki iki işaretçi fikrinin aynısı.</p>
+      </div>
+      <div>
+        <h3>Hazır metot olmadan nasıl yapılır?</h3>
+        <p>Mülakatlarda bazen <code>Split</code> kullanmadan çözmen istenir. Metni sondan başa okursan kelimeler zaten ters sırayla karşına çıkar: boşlukları atla, kelimenin son harfini işaretle, başını bul ve sonuca ekle. Bu yol da <b>O(n) zaman</b> alır ve ayrı bir kelime dizisi oluşturmaz.</p>
+<pre class="snippet">StringBuilder sb = new StringBuilder();
+int i = s.Length - 1;
+while (i &gt;= 0)
+{
+    while (i &gt;= 0 &amp;&amp; s[i] == ' ') i--;  // boşlukları atla
+    if (i &lt; 0) break;
+
+    int end = i;                          // kelimenin son harfi
+    while (i &gt;= 0 &amp;&amp; s[i] != ' ') i--;  // kelimenin başına git
+
+    if (sb.Length &gt; 0) sb.Append(' ');
+    sb.Append(s, i + 1, end - i);         // kelimeyi ekle
+}
+return sb.ToString();</pre>
+      </div>
+      <div>
+        <h3>LeetCode'un ek sorusu: yerinde çevirmek</h3>
+        <p>Metin değiştirilebilir bir karakter dizisi olsaydı ek bellek kullanmadan da yapılabilirdi. Önce bütün metni harf harf ters çevir: <code>"eulb si yks eht"</code>. Sonra her kelimeyi kendi içinde geri çevir: <code>"blue is sky the"</code>. En son fazla boşlukları sola kaydırarak sil. C#'ta <code>string</code> değiştirilemediği için önce bir <code>char[]</code>'a kopyalamak gerekir, bu da zaten O(n) bellek demek. Bu yüzden C#'ta bu ek hedefin pek anlamı yok.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <a href="https://leetcode.com/problems/reverse-words-in-a-string/">Soru: LeetCode 151</a>
+    <a href="https://github.com/physerkm/leetcode-solutions/blob/main/src/LeetCode/Problems/P0151_ReverseWordsInAString/Solution.cs">Kod: Solution.cs</a>
+    <a href="../">Tüm anlatımlar</a>
+    <a href="https://github.com/physerkm/leetcode-solutions">Repo: physerkm/leetcode-solutions</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const MAX_LEN = 30;
+
+  // The pieces s.Split(' ') makes before empty ones are removed:
+  // every space ends a piece, and whatever follows the last space is the final piece.
+  function pieces(s) {
+    const out = [];
+    let start = 0;
+    for (let k = 0; k <= s.length; k++) {
+      if (k === s.length || s[k] === ' ') {
+        out.push({ start, end: k, sep: k < s.length ? k : -1, text: s.slice(start, k) });
+        start = k + 1;
+      }
+    }
+    return out;
+  }
+
+  // Steps: Split piece by piece, then Array.Reverse swap by swap, then string.Join word by word.
+  // sState: how to draw s (null = plain); marks: word index -> state; ij: the counters inside Array.Reverse.
+  function buildSteps(s) {
+    const n = s.length;
+    const steps = [];
+    let words = [];
+    let wordsLen;
+    let result = null;
+    let i;
+    let j;
+    const snap = (o) => steps.push({
+      words: words.slice(), wordsLen, result, i, j, sState: null, marks: {}, ij: null,
+      fresh: 0, done: false, changed: [], lines: [], ...o,
+    });
+    const q = (w) => `<code>"${w}"</code>`;
+
+    snap({
+      kind: 'start',
+      text: `<code>s</code> ${n} karakter; boşlukları <b>·</b> ile gösteriyoruz. Kelimelerin sırasını ters çevireceğiz, kelimelerin içindeki harfler aynı kalacak. Fazla boşluklar da gidecek.`,
+    });
+
+    // 1. Split
+    let skipped = 0;
+    for (const p of pieces(s)) {
+      const sState = { doneTo: p.start, piece: p.text ? [p.start, p.end] : null, cut: p.sep, skip: !p.text };
+      let text;
+      const marks = {};
+      if (p.text) {
+        words.push(p.text);
+        marks[words.length - 1] = 'new';
+        text = (p.sep >= 0
+          ? `<code>Split</code> soldan okuyor ve bir sonraki boşlukta (index ${p.sep}) kesiyor. Parça: ${q(p.text)}.`
+          : `Başka boşluk yok; metnin sonuna kadar olan parça: ${q(p.text)}.`) +
+          ' Boş değil, <code>words</code> dizisine eklendi.';
+      } else {
+        skipped++;
+        if (p.sep === 0) {
+          text = 'Metin boşlukla başlıyor: ilk boşluktan (index 0) önce hiç karakter yok, parça <code>""</code>, yani boş. <code>RemoveEmptyEntries</code> boş parçaları atıyor.';
+        } else if (p.sep > 0) {
+          text = `Bu boşluk (index ${p.sep}) bir öncekinin hemen arkasında: aradaki parça <code>""</code>, yani boş. <code>RemoveEmptyEntries</code> sayesinde atlandı.`;
+        } else {
+          text = 'Metin boşlukla bitiyor: son boşluktan sonra hiç karakter yok, son parça <code>""</code>. Bu da atlandı.';
+        }
+      }
+      snap({ kind: 'split', lines: ['split'], sState, marks, text });
+    }
+
+    const m = words.length;
+    wordsLen = m;
+    snap({
+      kind: 'splitDone', lines: ['split'], changed: ['len'], sState: { doneTo: n },
+      text: `<code>Split</code> bitti: <code>words</code> dizisinde ${m} kelime var. ` +
+        (skipped ? `${skipped} boş parça atıldı, hiçbiri diziye girmedi.` : 'Hiç boş parça çıkmadı.'),
+    });
+
+    // 2. Array.Reverse
+    i = 0;
+    j = m - 1;
+    if (m > 1) {
+      snap({
+        kind: 'revStart', lines: ['rev'], changed: ['i', 'j'], ij: true, sState: { doneTo: n },
+        text: `<code>Array.Reverse(words)</code> iki uçtan başlıyor: <code>i = 0</code> ilk kelimeyi, <code>j = ${j}</code> son kelimeyi gösteriyor. Ortada buluşana kadar yer değiştirecekler.`,
+      });
+    }
+    while (i < j) {
+      const [a, b] = [words[i], words[j]];
+      [words[i], words[j]] = [words[j], words[i]];
+      snap({
+        kind: 'swap', lines: ['rev'], ij: true, sState: { doneTo: n }, marks: { [i]: 'swap', [j]: 'swap' },
+        text: `<code>words[${i}]</code> (${q(a)}) ile <code>words[${j}]</code> (${q(b)}) yer değiştirdi. Sonra <code>i</code> bir sağa, <code>j</code> bir sola geçiyor.`,
+      });
+      i++;
+      j--;
+    }
+    let revText;
+    const revMarks = {};
+    if (m === 1) {
+      revText = '<code>Array.Reverse(words)</code>: tek kelime var, <code>i</code> ve <code>j</code> ikisi de 0. Yer değiştirecek bir şey yok.';
+      revMarks[0] = 'mid';
+    } else if (i === j) {
+      revText = `<code>i</code> ve <code>j</code> ortada buluştu (${i}). Ortadaki ${q(words[i])} zaten yerinde; dizi ters çevrildi.`;
+      revMarks[i] = 'mid';
+    } else {
+      revText = `<code>i = ${i}</code>, <code>j = ${j}</code>: <code>i</code>, <code>j</code>'yi geçti. Her kelime karşısındakiyle yer değiştirdi; dizi ters çevrildi.`;
+    }
+    snap({ kind: 'revDone', lines: ['rev'], changed: ['i', 'j'], ij: true, sState: { doneTo: n }, marks: revMarks, text: revText });
+    i = undefined;
+    j = undefined;
+
+    // 3. string.Join
+    result = '';
+    for (let k = 0; k < m; k++) {
+      const before = result.length;
+      if (k > 0) result += ' ';
+      result += words[k];
+      const marks = {};
+      for (let u = 0; u < k; u++) marks[u] = 'used';
+      marks[k] = 'cur';
+      let text;
+      if (k === 0) {
+        text = `<code>string.Join(" ", words)</code> ilk kelimeyi yazıyor: ${q(words[0])}. Başına boşluk koymuyor.` +
+          (m === 1 ? ' Tek kelime olduğu için sonuç bu kadar; sona da boşluk koymuyor.' : '');
+      } else {
+        text = `Araya tek bir boşluk, ardından ${q(words[k])}.` + (k === m - 1 ? ' Son kelimeydi; sona boşluk koymuyor.' : '');
+      }
+      snap({ kind: 'join', lines: ['join'], sState: { doneTo: n }, marks, fresh: result.length - before, text });
+    }
+
+    const inSpaces = s.split('').filter((c) => c === ' ').length;
+    snap({
+      kind: 'end', lines: ['join'], done: true, sState: { doneTo: n },
+      marks: Object.fromEntries(words.map((_, k) => [k, 'used'])),
+      text: `<code>return</code> ${q(result)}. ` + (inSpaces === m - 1
+        ? 'Girdide fazladan boşluk yoktu.'
+        : `Girdideki ${inSpaces} boşluktan ${m === 1 ? 'hiçbiri kalmadı.' : `sadece ${m - 1} tanesi kaldı: kelimelerin arasında birer tane.`}`),
+    });
+    return steps;
+  }
+
+  // Rendering
+  const CODE = [
+    ['split', '<span class="kw">string</span>[] words = s.Split(<span class="st">\' \'</span>,'],
+    ['split', '    StringSplitOptions.RemoveEmptyEntries);'],
+    ['', ''],
+    ['rev', 'Array.Reverse(words);'],
+    ['', ''],
+    ['join', '<span class="kw">return string</span>.Join(<span class="st">" "</span>, words);'],
+  ];
+  $('code').innerHTML = CODE.map(([id, html]) => `<span class="ln"${id ? ` data-id="${id}"` : ''}>${html || ' '}</span>`).join('');
+  const codeLines = [...document.querySelectorAll('.ln[data-id]')];
+
+  const TAGS = {
+    start: ['Başlangıç', ''], split: ['Split', ''], splitDone: ['Split bitti', ''],
+    revStart: ['Array.Reverse', ''], swap: ['Yer değiştir', ''], revDone: ['Ters çevrildi', ''],
+    join: ['string.Join', ''], end: ['Bitti', 'ok'],
+  };
+
+  let listText = 'a good   example';
+  let text = '';
+  let steps = [];
+  let idx = 0;
+  let timer = null;
+
+  function parse(raw) {
+    if (raw.length === 0 || raw.length > MAX_LEN) return null;
+    if (!/^[A-Za-z0-9 ]+$/.test(raw) || raw.trim() === '') return null;
+    return raw;
+  }
+
+  const charBox = (c, st) => `<span class="ch${c === ' ' ? ' sp' : ''}"${st ? ` data-st="${st}"` : ''}>${c === ' ' ? '·' : c}</span>`;
+
+  function render() {
+    const st = steps[idx];
+
+    // s
+    let html = '';
+    for (let k = 0; k < text.length; k++) {
+      let state = '';
+      const ss = st.sState;
+      if (ss) {
+        if (ss.piece && k >= ss.piece[0] && k < ss.piece[1]) state = 'piece';
+        else if (k === ss.cut) state = ss.skip ? 'skip' : 'cut';
+        else if (k < ss.doneTo) state = 'done';
+      }
+      html += charBox(text[k], state);
+    }
+    $('s-row').innerHTML = html;
+
+    // words
+    $('w-row').innerHTML = st.words.length === 0
+      ? '<p class="empty">henüz kelime yok</p>'
+      : `<div class="words">${st.words.map((w, k) => {
+        const lbl = st.ij ? [k === st.i ? 'i' : '', k === st.j ? 'j' : ''].filter(Boolean).join(' ') : '';
+        return `<div class="wcol"><span class="wlbl">${lbl}</span><span class="chip"${st.marks[k] ? ` data-st="${st.marks[k]}"` : ''}>${w}</span><span class="widx">[${k}]</span></div>`;
+      }).join('')}</div>`;
+
+    // result
+    if (st.result === null) {
+      $('r-row').innerHTML = '<p class="empty">Join henüz başlamadı</p>';
+    } else {
+      const r = st.result;
+      $('r-row').innerHTML = `<div class="chars">${[...r].map((c, k) => charBox(c, k >= r.length - st.fresh ? 'new' : '')).join('')}</div>`;
+    }
+
+    const show = (v) => (v === undefined ? '—' : String(v));
+    const vars = [['words.Length', st.wordsLen, 'len'], ['i', st.ij ? st.i : undefined, 'i'], ['j', st.ij ? st.j : undefined, 'j']];
+    $('vars').innerHTML = vars.map(([name, v, key]) =>
+      `<div class="var${st.changed.includes(key) ? ' changed' : ''}"><dt>${name}</dt><dd>${show(v)}</dd></div>`).join('');
+
+    $('result').textContent = st.done ? `"${st.result}"` : '—';
+    $('out').dataset.kind = st.done ? 'done' : '';
+
+    codeLines.forEach((el) => el.classList.toggle('hl', st.lines.includes(el.dataset.id)));
+
+    const [tagText, tagKind] = TAGS[st.kind];
+    $('step-count').textContent = `Adım ${idx + 1} / ${steps.length}`;
+    $('step-tag').textContent = tagText;
+    $('step-tag').dataset.kind = tagKind;
+    $('step-text').innerHTML = st.text;
+    $('prev-btn').disabled = idx === 0;
+    $('reset').disabled = idx === 0;
+    $('next-btn').disabled = idx === steps.length - 1;
+
+    document.querySelectorAll('.presets button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.l === listText)));
+  }
+
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    $('play').textContent = '▶ Oynat';
+  }
+
+  function restart(raw) {
+    stop();
+    listText = raw;
+    text = raw;
+    steps = buildSteps(raw);
+    idx = 0;
+    render();
+  }
+
+  $('next-btn').addEventListener('click', () => { stop(); if (idx < steps.length - 1) { idx++; render(); } });
+  $('prev-btn').addEventListener('click', () => { stop(); if (idx > 0) { idx--; render(); } });
+  $('reset').addEventListener('click', () => { stop(); idx = 0; render(); });
+  $('play').addEventListener('click', () => {
+    if (timer) { stop(); return; }
+    if (idx === steps.length - 1) { idx = 0; render(); }
+    $('play').textContent = '❚❚ Durdur';
+    timer = setInterval(() => {
+      if (idx < steps.length - 1) { idx++; render(); }
+      if (idx === steps.length - 1) stop();
+    }, 1100);
+  });
+  document.querySelectorAll('.presets button').forEach((b) => b.addEventListener('click', () => {
+    $('list').value = b.dataset.l;
+    $('list-err').hidden = true;
+    restart(b.dataset.l);
+  }));
+  $('list').addEventListener('input', (e) => {
+    const parsed = parse(e.target.value);
+    if (!parsed) { $('list-err').hidden = false; return; }
+    $('list-err').hidden = true;
+    restart(parsed);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next-btn').click();
+    else if (e.key === 'ArrowLeft') $('prev-btn').click();
+  });
+
+  restart(listText);
+})();
+</script>
+</body>
+</html>
