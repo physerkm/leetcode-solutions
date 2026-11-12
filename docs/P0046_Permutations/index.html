@@ -1,0 +1,750 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bütün Sıralamaları Bulmak</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: one reading column; the stepper is a single tool panel (controls, step card, then the decision tree
+   beside current / nums+used / result; then variables + call stack + return value | code) that stacks on phones. */
+:root {
+  --bg: #f3f5f9;
+  --surface: #ffffff;
+  --ink: #141b26;
+  --muted: #5a6779;
+  --line: #d6dce6;
+  --accent: #3346c8;
+  --accent-ink: #ffffff;
+  --range: #e3e9fb;
+  --range-ink: #1d2a6b;
+  --good: #17824a;
+  --good-soft: #dcf1e4;
+  --good-soft-ink: #145c36;
+  --bad: #b8402a;
+  --bad-soft: #f9e3dd;
+  --bad-soft-ink: #7a2615;
+  --code-bg: #f7f8fb;
+  --code-hl: #dfe5fb;
+  --kw: #7a3aa8;
+  --str: #17824a;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+    --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+    --good: #3fbf7a; --good-soft: #14301f; --good-soft-ink: #8fe0b2;
+    --bad: #ff7d66; --bad-soft: #3a1c17; --bad-soft-ink: #ffb4a5;
+    --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0; --str: #8fe0b2;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e131a; --surface: #161d27; --ink: #e5eaf2; --muted: #93a0b3; --line: #2a3443;
+  --accent: #8191f8; --accent-ink: #0b1020; --range: #1c2747; --range-ink: #c9d3ff;
+  --good: #3fbf7a; --good-soft: #14301f; --good-soft-ink: #8fe0b2;
+  --bad: #ff7d66; --bad-soft: #3a1c17; --bad-soft-ink: #ffb4a5;
+  --code-bg: #111821; --code-hl: #22305a; --kw: #c79bf0; --str: #8fe0b2;
+  color-scheme: dark;
+}
+
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
+.wrap {
+  max-width: 1040px; margin: 0 auto;
+  padding-block: 40px 72px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px;
+}
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--muted); margin: 0; }
+h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 6vw, 54px); line-height: 1.05; letter-spacing: -.02em; margin: 8px 0 14px; text-wrap: balance; }
+.lead { color: var(--muted); margin: 0; font-size: 17px; }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -.01em; margin: 0 0 18px; text-wrap: balance; }
+code { font-family: var(--font-mono); font-size: .88em; background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
+
+/* Idea */
+.idea { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; list-style: none; padding: 0; margin: 0; }
+.idea li { border-top: 2px solid var(--ink); padding-top: 12px; min-width: 0; }
+.idea .n { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.idea h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 2px 0 6px; text-wrap: balance; }
+.idea p { margin: 0; color: var(--muted); font-size: 15px; }
+@media (max-width: 760px) { .idea { grid-template-columns: 1fr; gap: 20px; } }
+
+/* Stepper panel */
+.stepper { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+@media (max-width: 560px) { .stepper { padding: 16px; } }
+.stepper h2 { margin: 0; }
+.controls { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+.field label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+input[type="text"] { width: 12em; max-width: 100%; box-sizing: border-box; font: 600 18px var(--font-mono); padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); color: var(--ink); }
+.presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.err { margin: 0; font-size: 13px; color: var(--bad); }
+button { font: 500 14px var(--font-body); padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .4; cursor: default; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.presets button { font-size: 13px; padding: 7px 10px; }
+.presets .mono { font-family: var(--font-mono); font-weight: 700; margin-right: 4px; }
+.presets button[aria-pressed="true"] { border-color: var(--accent); background: var(--range); color: var(--range-ink); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.nav { display: flex; flex-wrap: wrap; gap: 8px; }
+#play { min-width: 7.5em; }
+
+.step { background: var(--bg); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; }
+.step-meta { display: flex; gap: 10px; align-items: center; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag { font-weight: 600; padding: 2px 9px; border-radius: 999px; background: var(--range); color: var(--range-ink); }
+.tag[data-kind="ok"] { background: var(--good); color: var(--surface); }
+.tag[data-kind="bad"] { background: var(--bad-soft); color: var(--bad-soft-ink); }
+#step-text { margin: 8px 0 0; font-size: 16.5px; max-width: 78ch; min-height: 4.8em; }
+
+.panel-label { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 8px; }
+.panel-label code { font-weight: 500; }
+.empty { font-size: 14px; color: var(--muted); margin: 0; min-height: 32px; display: flex; align-items: center; }
+
+/* Tree on the left, the three data rows on the right. */
+.viz { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 24px 36px; align-items: start; }
+@media (max-width: 760px) { .viz { grid-template-columns: 1fr; } }
+.tree-col { min-width: 0; max-width: 100%; }
+.tree { display: block; max-width: 100%; height: auto; }
+.lanes { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+/* Decision tree. One circle per choice; the path from the top spells out current. */
+.tree .edge { stroke: var(--line); stroke-width: 2; stroke-dasharray: 4 4; transition: stroke .2s; }
+.tree .edge[data-st="path"] { stroke: var(--accent); stroke-width: 3; stroke-dasharray: none; }
+.tree .edge[data-st="done"] { stroke: var(--muted); stroke-dasharray: none; opacity: .55; }
+.tree .edge[data-st="undo"] { stroke: var(--bad); stroke-width: 3; stroke-dasharray: none; }
+.tree circle { fill: var(--surface); stroke: var(--line); stroke-width: 1.5; stroke-dasharray: 3 3; transition: fill .2s, stroke .2s; }
+.tree text { fill: var(--muted); font: 600 12px var(--font-mono); text-anchor: middle; dominant-baseline: central; font-variant-ligatures: none; }
+.tree .node[data-st="path"] circle { fill: var(--range); stroke: var(--accent); stroke-width: 2; stroke-dasharray: none; }
+.tree .node[data-st="path"] text { fill: var(--range-ink); }
+.tree .node[data-st="cur"] circle { fill: var(--accent); stroke: var(--accent); stroke-width: 2; stroke-dasharray: none; }
+.tree .node[data-st="cur"] text { fill: var(--accent-ink); }
+.tree .node[data-st="done"] circle { fill: var(--bg); stroke: var(--muted); stroke-dasharray: none; }
+.tree .node[data-st="done"] text { fill: var(--ink); }
+.tree .node[data-st="saved"] circle { fill: var(--good-soft); stroke: var(--good); stroke-width: 2; stroke-dasharray: none; }
+.tree .node[data-st="saved"] text { fill: var(--good-soft-ink); }
+.tree .node[data-st="new"] circle { fill: var(--good); stroke: var(--good); stroke-width: 2; stroke-dasharray: none; }
+.tree .node[data-st="new"] text { fill: var(--surface); }
+.tree .node[data-st="undo"] circle { fill: var(--bad-soft); stroke: var(--bad); stroke-width: 2; stroke-dasharray: none; }
+.tree .node[data-st="undo"] text { fill: var(--bad-soft-ink); }
+.tree .order { fill: var(--good); font-size: 11px; font-weight: 700; }
+.tree-note { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
+
+/* Boxes for current, nums and used. */
+.vgrid { display: grid; gap: 4px 6px; align-items: center; justify-content: start; }
+.rh { font-size: 13px; color: var(--muted); padding-right: 4px; }
+.lbl { min-height: 15px; font: 700 11px/15px var(--font-mono); color: var(--accent); text-align: center; white-space: nowrap; }
+.lbl.skip { color: var(--muted); font-weight: 500; }
+.cell {
+  height: 32px; box-sizing: border-box; border-radius: 6px;
+  display: grid; place-items: center; font: 600 15px var(--font-mono);
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  transition: background-color .2s, color .2s;
+}
+.cell.f { color: var(--muted); font-weight: 500; font-size: 13px; }
+.cell.t { font-size: 13px; }
+.cell[data-st="path"] { background: var(--range); color: var(--range-ink); border-color: transparent; }
+.cell[data-st="cur"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.cell[data-st="saved"] { background: var(--good-soft); color: var(--good-soft-ink); border-color: var(--good); }
+.cell[data-st="undo"] { background: var(--bad-soft); color: var(--bad-soft-ink); border: 2px solid var(--bad); }
+.cell[data-st="ptr"] { border: 2px solid var(--accent); }
+.cell[data-st="empty"] { border-style: dashed; background: transparent; }
+.cell.strike { text-decoration: line-through; }
+.idx { font: 500 12px var(--font-mono); color: var(--muted); text-align: center; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  padding: 5px 10px; border-radius: 8px; font: 600 14px var(--font-mono); white-space: nowrap;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+  transition: background-color .2s, color .2s;
+}
+.chip .k { color: var(--muted); font-weight: 500; margin-right: 6px; }
+.chip[data-st="new"] { background: var(--good-soft); color: var(--good-soft-ink); border-color: var(--good); }
+.chip[data-st="new"] .k { color: var(--good-soft-ink); }
+@media (prefers-reduced-motion: reduce) { .cell, .chip, .tree .edge, .tree circle { transition: none; } }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); }
+.sw { display: inline-block; width: 12px; height: 12px; border-radius: 50%; vertical-align: -1px; margin-right: 6px; border: 1px solid var(--line); box-sizing: border-box; }
+.sw.cur { background: var(--accent); border-color: var(--accent); }
+.sw.path { background: var(--range); border: 2px solid var(--accent); }
+.sw.saved { background: var(--good-soft); border: 2px solid var(--good); }
+.sw.undo { background: var(--bad-soft); border: 2px solid var(--bad); }
+.sw.done { background: var(--bg); border-color: var(--muted); }
+.sw.todo { border: 1px dashed var(--muted); }
+
+/* Variables + call stack + return value | code */
+.board { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 28px; }
+@media (max-width: 880px) { .board { grid-template-columns: 1fr; } }
+.col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.vars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin: 0; }
+.var { border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; background: var(--bg); min-width: 0; }
+.var dt { font: 400 12px var(--font-mono); color: var(--muted); overflow-wrap: anywhere; }
+.var dd { margin: 0; font: 600 18px var(--font-mono); font-variant-numeric: tabular-nums; }
+.var.changed { border-color: var(--accent); background: var(--range); }
+.var.changed dd { color: var(--range-ink); }
+.note { margin: 0; font-size: 13px; color: var(--muted); }
+.stack { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.stack li { font: 500 13px var(--font-mono); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stack li.top { border-color: var(--accent); background: var(--range); color: var(--range-ink); font-weight: 600; }
+.out { margin-top: 12px; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; background: var(--bg); min-width: 0; }
+.out span { display: block; font-size: 12px; color: var(--muted); }
+.out b { font: 700 16px var(--font-mono); overflow-wrap: anywhere; }
+.out[data-kind="done"] { border: 2px solid var(--good); background: var(--good-soft); }
+.out[data-kind="done"] b { color: var(--good-soft-ink); }
+.code { margin: 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 0; overflow-x: auto; font: 13px/1.6 var(--font-mono); }
+@media (max-width: 560px) { .code { font-size: 12px; } }
+.ln { display: block; padding: 0 14px 0 11px; white-space: pre; border-left: 3px solid transparent; }
+.ln.hl { background: var(--code-hl); border-left-color: var(--accent); }
+.kw { color: var(--kw); }
+
+/* Two columns keep lines short enough to read while still using the page width. */
+.why-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 40px; }
+.why-grid > div { border-top: 1px solid var(--line); padding-top: 12px; min-width: 0; }
+.why h3 { font-family: var(--font-display); font-weight: 700; font-size: 19px; margin: 0 0 6px; text-wrap: balance; }
+.why p { margin: 0; color: var(--muted); }
+.why b { color: var(--ink); }
+.snippet { margin: 10px 0 0; background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; overflow-x: auto; font: 12.5px/1.55 var(--font-mono); color: var(--ink); }
+@media (max-width: 760px) { .why-grid { grid-template-columns: 1fr; gap: 20px; } }
+.foot { display: flex; flex-wrap: wrap; gap: 6px 20px; border-top: 1px solid var(--line); padding-top: 16px; font-size: 14px; color: var(--muted); }
+.foot a { color: var(--accent); }
+
+/* No ligatures: `==` and `<` should look the way they are typed.
+   Kept last because the `font` shorthand above would reset it. */
+code, .code, .snippet, .cell, .chip, .var dd, .stack li, .out b, input[type="text"] { font-variant-ligatures: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">LeetCode 46 · Permutations · Medium</p>
+    <h1>Bütün Sıralamaları Bulmak</h1>
+    <p class="lead">Çözümün her adımını burada izleyebilirsin. Sayıları seç, <b>İleri</b>'ye bas ya da <b>Oynat</b>'a tıkla. Karar ağacında hangi dalın gezildiğini, <code>current</code> ile <code>used</code>'ın nasıl değiştiğini ve sıralamaların <code>result</code>'a nasıl eklendiğini adım adım gör.</p>
+  </header>
+
+  <section aria-labelledby="idea-h">
+    <h2 id="idea-h">Fikir üç adımda</h2>
+    <ol class="idea">
+      <li>
+        <span class="n">1</span>
+        <h3>Seç</h3>
+        <p>Sıradaki kutu için henüz kullanılmamış bir sayı seç. Sayıyı <code>current</code>'a ekle, <code>used</code>'da da "kullanıldı" diye işaretle.</p>
+      </li>
+      <li>
+        <span class="n">2</span>
+        <h3>İlerle</h3>
+        <p><code>Backtrack</code> kendini çağırıp sonraki kutuyu doldurur. Bütün kutular dolunca listenin o anki hâlinin <b>kopyası</b> <code>result</code>'a eklenir.</p>
+      </li>
+      <li>
+        <span class="n">3</span>
+        <h3>Geri al</h3>
+        <p>Çağrı dönünce son sayıyı listeden çıkar ve işaretini kaldır. Her şey seçimden önceki hâline döner. Döngü de aynı kutu için sıradaki sayıyı dener.</p>
+      </li>
+    </ol>
+  </section>
+
+  <section class="stepper" aria-labelledby="st-h">
+    <h2 id="st-h">Adım adım izle</h2>
+
+    <div class="controls">
+      <div class="row">
+        <div class="field">
+          <label for="list">Sayılar (virgülle ayır, en fazla 3 farklı sayı)</label>
+          <input id="list" type="text" value="1, 2, 3" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="nav">
+          <button type="button" id="reset">Baştan</button>
+          <button type="button" id="prev-btn">← Geri</button>
+          <button type="button" id="next-btn" class="primary">İleri →</button>
+          <button type="button" id="play">▶ Oynat</button>
+        </div>
+      </div>
+      <div class="presets" role="group" aria-label="Hazır örnekler">
+        <button type="button" data-l="1, 2, 3"><span class="mono">[1, 2, 3]</span></button>
+        <button type="button" data-l="0, 1"><span class="mono">[0, 1]</span></button>
+        <button type="button" data-l="1"><span class="mono">[1]</span>tek sayı</button>
+        <button type="button" data-l="4, -2, 0"><span class="mono">[4, -2, 0]</span>negatif, sırasız</button>
+      </div>
+      <p class="err" id="list-err" hidden>1 ile 3 arası, birbirinden farklı tam sayı yaz: her biri -10 ile 10 arasında, virgülle ayrılmış. 4 sayıda ağaç 24 yaprağa çıkıyor ve ekrana sığmıyor.</p>
+    </div>
+
+    <div class="step" aria-live="polite">
+      <div class="step-meta"><span id="step-count"></span><span id="step-tag" class="tag"></span></div>
+      <p id="step-text"></p>
+    </div>
+
+    <div class="viz">
+      <div class="tree-col" id="tree-col">
+        <p class="panel-label">Karar ağacı</p>
+        <div id="tree"></div>
+        <p class="tree-note">Her daire bir seçim. Yukarıdan inen yol <code>current</code>'ı oluşturuyor; <b>#1</b>, <b>#2</b> … <code>result</code>'a eklenme sırası.</p>
+      </div>
+      <div class="lanes">
+        <div>
+          <p class="panel-label"><code>current</code> (kurulan sıralama, kutu kutu)</p>
+          <div id="cur-row"></div>
+        </div>
+        <div>
+          <p class="panel-label"><code>nums</code> ve <code>used</code></p>
+          <div id="nu-row"></div>
+        </div>
+        <div>
+          <p class="panel-label"><code>result</code> (bulunan sıralamalar)</p>
+          <div id="res-row"></div>
+        </div>
+      </div>
+    </div>
+    <div class="legend">
+      <span><i class="sw cur"></i>şu an çalışan çağrının seçimi</span>
+      <span><i class="sw path"></i><code>current</code>'taki seçimler</span>
+      <span><i class="sw saved"></i>kaydedilen sıralama</span>
+      <span><i class="sw undo"></i>geri alınan seçim</span>
+      <span><i class="sw done"></i>gezilip bitmiş dal</span>
+      <span><i class="sw todo"></i>henüz gezilmedi</span>
+    </div>
+
+    <div class="board">
+      <div class="col">
+        <p class="panel-label">Değişkenler</p>
+        <dl class="vars" id="vars"></dl>
+        <p class="note">Her <code>Backtrack</code> çağrısının kendi <code>i</code>'si var; burada o an çalışan çağrınınki görünüyor. <code>current</code>, <code>used</code> ve <code>result</code> ise bütün çağrılarda aynı nesneler.</p>
+        <p class="panel-label" style="margin-top: 12px">Çağrı yığını (en alttaki şu an çalışıyor)</p>
+        <ul class="stack" id="stack"></ul>
+        <div class="out" id="out"><span>dönüş değeri</span><b id="result"></b></div>
+      </div>
+      <div class="col">
+        <p class="panel-label">Kod (Solution.cs içindeki metotlar)</p>
+        <div class="code" id="code" role="region" aria-label="C# kodu" tabindex="0"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="why" aria-labelledby="why-h">
+    <h2 id="why-h">Neden O(n · n!) zaman ve O(n) bellek?</h2>
+    <div class="why-grid">
+      <div>
+        <h3>O(n · n!) zaman</h3>
+        <p>n farklı sayının n! sıralaması var, yani ağacın en alt sırasında n! yaprak bulunuyor. Her yaprakta n sayılık listenin kopyası alınıyor: n · n! iş. Ağaçtaki öteki dairelerin toplamı yaprak sayısının en fazla yaklaşık 1,72 katı, her birinde de n adımlık bir <code>for</code> döngüsü çalışıyor. Toplam yine <b>O(n · n!) zaman</b>.</p>
+      </div>
+      <div>
+        <h3>O(n) ek bellek</h3>
+        <p><code>current</code> en fazla n sayı tutuyor, <code>used</code> da n kutu. Aynı anda en fazla n + 1 <code>Backtrack</code> çağrısı açık oluyor: her kutu için bir tane, bir de listenin dolduğunu gören. Sonuç listesi n · n! sayı tutuyor ama soru zaten onu istediği için genelde hesaba katılmaz: <b>O(n) ek bellek</b>.</p>
+      </div>
+      <div>
+        <h3>Neden kopyasını ekliyoruz?</h3>
+        <p><code>current</code>, bütün çağrıların paylaştığı tek bir liste. <code>result.Add(current)</code> yazarsan <code>result</code>'a altı ayrı liste eklenmez, aynı listeyi gösteren altı referans eklenir. Geri alma adımları en sonunda o listeyi boşaltır ve sonuç şöyle olur:</p>
+<pre class="snippet">[[], [], [], [], [], []]</pre>
+        <p style="margin-top: 10px"><code>new List&lt;int&gt;(current)</code> ise listenin o anki hâlinin fotoğrafını çekiyor. Sonradan <code>current</code> değişse de kopya değişmiyor.</p>
+      </div>
+      <div>
+        <h3>Geri alma olmasaydı?</h3>
+        <p>İki geri alma satırını silersen sadece ilk sıralama bulunur. <code>[1, 2, 3]</code>'ten sonra <code>used</code>'ın bütün kutuları <code>true</code> kalır ve hiçbir çağrı yeni bir sayı seçemez. Geri alma, bir dalı bitirince her şeyi seçimden önceki hâline döndürüyor. Böylece aynı kutu için sıradaki sayı denenebiliyor. Yöntemin adı da buradan geliyor: <b>backtracking</b>, yani seç, dalı gez, geri dön.</p>
+      </div>
+      <div>
+        <h3><code>used</code> olmadan: yer değiştirerek</h3>
+        <p>Yaygın bir başka çözüm, sayıları dizinin içinde yer değiştirerek dizmek. <code>start</code>'tan önceki kutular dolu sayılıyor. <code>start</code> kutusuna sırayla her sayı getiriliyor, alt çağrı bitince yer değiştirme geri alınıyor. <code>used</code> ve <code>current</code> gerekmiyor, süre yine O(n · n!). Ama çalışırken <code>nums</code>'ın içi karışıyor ve kodu takip etmek daha zor. Bu yüzden çözümde <code>used</code>'lı hâli tercih ettik.</p>
+<pre class="snippet"><span class="kw">private static void</span> Backtrack(<span class="kw">int</span>[] nums, <span class="kw">int</span> start,
+    List&lt;IList&lt;<span class="kw">int</span>&gt;&gt; result)
+{
+    <span class="kw">if</span> (start == nums.Length)
+    {
+        result.Add(<span class="kw">new</span> List&lt;<span class="kw">int</span>&gt;(nums));
+        <span class="kw">return</span>;
+    }
+
+    <span class="kw">for</span> (<span class="kw">int</span> i = start; i &lt; nums.Length; i++)
+    {
+        (nums[start], nums[i]) = (nums[i], nums[start]);  // seç
+        Backtrack(nums, start + 1, result);                // ilerle
+        (nums[start], nums[i]) = (nums[i], nums[start]);  // geri al
+    }
+}</pre>
+      </div>
+      <div>
+        <h3>Daha hızlısı olabilir mi?</h3>
+        <p>Hayır. Cevabın kendisi n! liste ve her birinde n sayı var; bunları yazmak bile n · n! adım sürer. Bu çözüm her sıralamayı tam bir kez bulduğu için o sınırda. n! çok hızlı büyüyor: 3 sayı 6, 6 sayı 720, 10 sayı 3.628.800 sıralama demek. LeetCode'un en fazla 6 sayı vermesinin sebebi bu. Aynı <b>seç → ilerle → geri al</b> kalıbı Subsets (78), Combination Sum (39) ve N-Queens (51) gibi sorularda da kullanılıyor.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <a href="https://leetcode.com/problems/permutations/">Soru: LeetCode 46</a>
+    <a href="https://github.com/physerkm/leetcode-solutions/blob/main/src/LeetCode/Problems/P0046_Permutations/Solution.cs">Kod: Solution.cs</a>
+    <a href="../">Tüm anlatımlar</a>
+    <a href="https://github.com/physerkm/leetcode-solutions">Repo: physerkm/leetcode-solutions</a>
+  </footer>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const MAX_N = 3;
+
+  // Steps: one per choice, one per saved permutation and one per undo, in the order the code runs them.
+  // path: indices chosen so far (also the tree node we are at); frames: the i of each open Backtrack call.
+  function buildSteps(nums) {
+    const n = nums.length;
+    let fact = 1;
+    for (let k = 2; k <= n; k++) fact *= k;
+    const steps = [];
+    const current = [];
+    const path = [];
+    const used = new Array(n).fill(false);
+    const result = [];
+    const done = new Set();
+    const saved = new Map();
+    const frames = [];
+    const snap = (o) => steps.push({
+      current: current.slice(), path: path.slice(), used: used.slice(),
+      result: result.map((r) => r.slice()), done: new Set(done), saved: new Map(saved), frames: frames.slice(),
+      mark: null, skipped: [], removed: null, finished: false, lines: [], ...o,
+    });
+    const arr = (a) => `[${a.join(', ')}]`;
+    const c = (s) => `<code>${s}</code>`;
+
+    snap({
+      kind: 'start', lines: ['init', 'call0'],
+      text: `${c('nums')} = ${arr(nums)}: ${n} sayı, yani ${n}! = ${fact} sıralama bulunacak. ${c('result')} ve ${c('current')} boş, ${c('used')}'ın bütün kutuları ${c('false')}. ${c('Permute')} ilk ${c('Backtrack')} çağrısını yapıyor; bu çağrı 1. kutuyu dolduracak.`,
+    });
+
+    function backtrack() {
+      const d = current.length;
+      frames.push(undefined);
+      if (d === n) {
+        result.push(current.slice());
+        saved.set(path.join(','), result.length);
+        let text = `Liste dolu (${c(`current.Count == ${n}`)}): ${arr(current)} bir sıralama. Kopyası ${c('result')}'a eklendi; şimdiye kadar ${result.length} / ${fact} sıralama bulundu.`;
+        if (result.length === 1) text += ` Kopya şart, çünkü ${c('current')} birazdan değişecek.`;
+        text += ` ${c('return')} ile bu çağrı bitiyor.`;
+        snap({ kind: 'save', lines: ['full', 'save', 'return'], text });
+        frames.pop();
+        done.add(path.join(','));
+        return;
+      }
+
+      let skipped = [];
+      let tried = 0;
+      for (let k = 0; k < n; k++) {
+        if (used[k]) { skipped.push(k); continue; }
+        frames[frames.length - 1] = k;
+        current.push(nums[k]);
+        used[k] = true;
+        path.push(k);
+
+        let text = tried === 0 ? `${d + 1}. kutu: ` : `${d + 1}. kutu için sıradaki seçenek: `;
+        if (skipped.length) {
+          text += `${skipped.map((q) => c(`i = ${q}`)).join(' ve ')} atlandı, çünkü ${skipped.map((q) => nums[q]).join(' ve ')} zaten listede. `;
+        }
+        text += `${c(`i = ${k}`)} ile ${nums[k]} seçildi: ${c('current')} = ${arr(current)}, ${c(`used[${k}] = true`)}. `;
+        text += current.length === n
+          ? `Liste doldu; ${c('Backtrack')} yine de kendini çağırıyor, dolduğunu bir sonraki çağrı fark edecek.`
+          : `${d + 2}. kutu için ${c('Backtrack')} kendini çağırıyor.`;
+        snap({ kind: 'choose', lines: ['for', 'choose', 'recurse'].concat(skipped.length ? ['skip'] : []), mark: k, skipped, text });
+        skipped = [];
+        tried++;
+
+        backtrack();
+
+        const childKey = path.join(',');
+        current.pop();
+        used[k] = false;
+        path.pop();
+
+        const later = [];
+        for (let q = k + 1; q < n; q++) later.push(q);
+        const hasMore = later.some((q) => !used[q]);
+        let undoText = `${d + 1}. kutuyu dolduran çağrıya geri dönüldü. Geri al: ${nums[k]} listeden çıkarıldı, ${c(`used[${k}] = false`)}. ${c('current')} = ${arr(current)}. `;
+        if (hasMore) {
+          undoText += `Döngü ${d + 1}. kutu için sıradaki sayıya geçiyor.`;
+        } else {
+          const trailing = later.filter((q) => used[q]);
+          if (trailing.length) undoText += `${trailing.map((q) => c(`i = ${q}`)).join(' ve ')}: ${trailing.map((q) => nums[q]).join(' ve ')} zaten listede. `;
+          undoText += d === 0
+            ? `1. kutu için denenecek sayı kalmadı; ilk ${c('Backtrack')} çağrısı bitiyor.`
+            : `${d + 1}. kutu için denenecek sayı kalmadı; bu çağrı da bitiyor.`;
+        }
+        snap({ kind: 'undo', lines: ['undo'], mark: k, removed: { key: childKey, value: nums[k], slot: d }, text: undoText });
+      }
+      frames.pop();
+      done.add(path.join(','));
+    }
+
+    backtrack();
+
+    snap({
+      kind: 'end', lines: ['ret'], finished: true,
+      text: `Bütün dallar gezildi. ${c('Permute')}, ${c('result')}'ı döndürüyor: ${result.length} sıralama, ${n}! = ${fact} ile aynı.`,
+    });
+
+    // Mark the variables that differ from the previous step.
+    let prev = null;
+    for (const st of steps) {
+      st.vars = { i: st.frames.length ? st.frames[st.frames.length - 1] : undefined, cnt: st.current.length, res: st.result.length };
+      st.changed = prev ? Object.keys(st.vars).filter((key) => st.vars[key] !== prev[key]) : [];
+      prev = st.vars;
+    }
+    return steps;
+  }
+
+  // Tree layout: leaves side by side in the order the code reaches them, each parent centered over its children.
+  const LEAF_W = 52;
+  const ROW_H = 60;
+  const R = 16;
+  const TOP = 6;
+  const MIN_W = 160;
+
+  function layoutTree(n) {
+    const nodes = [];
+    let leaf = 0;
+    function rec(idxs, parent) {
+      const node = { key: idxs.join(','), idxs: idxs.slice(), depth: idxs.length, parent };
+      nodes.push(node);
+      if (idxs.length === n) {
+        node.x = leaf++;
+      } else {
+        const kids = [];
+        for (let k = 0; k < n; k++) {
+          if (idxs.includes(k)) continue;
+          idxs.push(k);
+          kids.push(rec(idxs, node));
+          idxs.pop();
+        }
+        node.x = (kids[0].x + kids[kids.length - 1].x) / 2;
+      }
+      return node;
+    }
+    rec([], null);
+    const width = Math.max(leaf * LEAF_W, MIN_W);
+    const off = (width - leaf * LEAF_W) / 2 + LEAF_W / 2;
+    for (const node of nodes) {
+      node.cx = off + node.x * LEAF_W;
+      node.cy = TOP + R + node.depth * ROW_H;
+    }
+    return { nodes, width, height: TOP + R + n * ROW_H + R + 22 };
+  }
+
+  function nodeState(st, key) {
+    if (st.removed && st.removed.key === key) return 'undo';
+    if (st.finished) return st.saved.has(key) ? 'saved' : 'done';
+    const here = st.path.join(',');
+    if (key === here) return st.kind === 'save' ? 'new' : 'cur';
+    if (st.path.length && (key === '' || here.startsWith(key + ','))) return 'path';
+    if (st.saved.has(key)) return 'saved';
+    if (st.done.has(key)) return 'done';
+    return 'todo';
+  }
+
+  // Rendering
+  const CODE = [
+    ['', '<span class="kw">public</span> IList&lt;IList&lt;<span class="kw">int</span>&gt;&gt; Permute(<span class="kw">int</span>[] nums)'],
+    ['', '{'],
+    ['init', '    <span class="kw">var</span> result = <span class="kw">new</span> List&lt;IList&lt;<span class="kw">int</span>&gt;&gt;();'],
+    ['init', '    <span class="kw">var</span> current = <span class="kw">new</span> List&lt;<span class="kw">int</span>&gt;();'],
+    ['init', '    <span class="kw">bool</span>[] used = <span class="kw">new bool</span>[nums.Length];'],
+    ['', ''],
+    ['call0', '    Backtrack(nums, used, current, result);'],
+    ['ret', '    <span class="kw">return</span> result;'],
+    ['', '}'],
+    ['', ''],
+    ['', '<span class="kw">private static void</span> Backtrack(<span class="kw">int</span>[] nums, <span class="kw">bool</span>[] used,'],
+    ['', '    List&lt;<span class="kw">int</span>&gt; current, List&lt;IList&lt;<span class="kw">int</span>&gt;&gt; result)'],
+    ['', '{'],
+    ['full', '    <span class="kw">if</span> (current.Count == nums.Length)'],
+    ['', '    {'],
+    ['save', '        result.Add(<span class="kw">new</span> List&lt;<span class="kw">int</span>&gt;(current));'],
+    ['return', '        <span class="kw">return</span>;'],
+    ['', '    }'],
+    ['', ''],
+    ['for', '    <span class="kw">for</span> (<span class="kw">int</span> i = 0; i &lt; nums.Length; i++)'],
+    ['', '    {'],
+    ['skip', '        <span class="kw">if</span> (used[i]) <span class="kw">continue</span>;'],
+    ['', ''],
+    ['choose', '        current.Add(nums[i]);'],
+    ['choose', '        used[i] = <span class="kw">true</span>;'],
+    ['', ''],
+    ['recurse', '        Backtrack(nums, used, current, result);'],
+    ['', ''],
+    ['undo', '        current.RemoveAt(current.Count - 1);'],
+    ['undo', '        used[i] = <span class="kw">false</span>;'],
+    ['', '    }'],
+    ['', '}'],
+  ];
+  $('code').innerHTML = CODE.map(([id, html]) => `<span class="ln"${id ? ` data-id="${id}"` : ''}>${html || ' '}</span>`).join('');
+  const codeLines = [...document.querySelectorAll('.ln[data-id]')];
+
+  const TAGS = {
+    start: ['Başlangıç', ''], choose: ['Seç', ''], save: ['Kaydet', 'ok'], undo: ['Geri al', 'bad'], end: ['Bitti', 'ok'],
+  };
+
+  let nums = [];
+  let tree = null;
+  let steps = [];
+  let idx = 0;
+  let timer = null;
+
+  function parse(raw) {
+    const t = raw.trim().replace(/^\[/, '').replace(/\]$/, '').trim();
+    if (t === '') return null;
+    const parts = t.split(',').map((p) => p.trim());
+    if (parts.length > MAX_N) return null;
+    const out = [];
+    for (const p of parts) {
+      if (!/^-?\d{1,2}$/.test(p)) return null;
+      const v = Number(p) || 0;
+      if (v < -10 || v > 10 || out.includes(v)) return null;
+      out.push(v);
+    }
+    return out;
+  }
+
+  function renderTree(st) {
+    const { nodes, width, height } = tree;
+    let edges = '';
+    let circles = '';
+    for (const node of nodes) {
+      const s = nodeState(st, node.key);
+      if (node.parent) {
+        const es = ['cur', 'path', 'new'].includes(s) ? 'path' : s === 'undo' ? 'undo' : ['done', 'saved'].includes(s) ? 'done' : 'todo';
+        edges += `<line class="edge" data-st="${es}" x1="${node.parent.cx}" y1="${node.parent.cy + R}" x2="${node.cx}" y2="${node.cy - R}"/>`;
+      }
+      const label = node.depth === 0 ? '[ ]' : String(nums[node.idxs[node.depth - 1]]);
+      circles += `<g class="node" data-st="${s}"><circle cx="${node.cx}" cy="${node.cy}" r="${R}"/><text x="${node.cx}" y="${node.cy}"${node.depth === 0 ? ' style="font-size:11px"' : ''}>${label}</text></g>`;
+      if (st.saved.has(node.key)) {
+        circles += `<text class="order" x="${node.cx}" y="${node.cy + R + 13}">#${st.saved.get(node.key)}</text>`;
+      }
+    }
+    $('tree').innerHTML = `<svg class="tree" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="Karar ağacı">${edges}${circles}</svg>`;
+  }
+
+  function render() {
+    const st = steps[idx];
+    const n = nums.length;
+    renderTree(st);
+
+    // current: one box per slot
+    let cur = `<div class="vgrid" style="grid-template-columns: repeat(${n}, 48px)">`;
+    for (let s = 0; s < n; s++) {
+      if (s < st.current.length) {
+        const state = st.kind === 'save' ? 'saved' : st.kind === 'choose' && s === st.current.length - 1 ? 'cur' : 'path';
+        cur += `<span class="cell" data-st="${state}">${st.current[s]}</span>`;
+      } else if (st.removed && st.removed.slot === s) {
+        cur += `<span class="cell strike" data-st="undo">${st.removed.value}</span>`;
+      } else {
+        cur += '<span class="cell" data-st="empty"></span>';
+      }
+    }
+    for (let s = 0; s < n; s++) cur += `<span class="idx">[${s}]</span>`;
+    $('cur-row').innerHTML = cur + '</div>';
+
+    // nums and used, one column per index
+    const activeI = st.vars.i;
+    let nu = `<div class="vgrid" style="grid-template-columns: max-content repeat(${n}, 56px)"><span></span>`;
+    for (let k = 0; k < n; k++) {
+      const lbl = k === activeI ? 'i' : st.skipped.includes(k) ? 'atlandı' : '';
+      nu += `<span class="lbl${lbl === 'atlandı' ? ' skip' : ''}">${lbl}</span>`;
+    }
+    nu += '<span class="rh"><code>nums</code></span>';
+    for (let k = 0; k < n; k++) nu += `<span class="cell"${k === activeI ? ' data-st="ptr"' : ''}>${nums[k]}</span>`;
+    nu += '<span class="rh"><code>used</code></span>';
+    for (let k = 0; k < n; k++) {
+      let state = st.used[k] ? 'path' : '';
+      if (k === st.mark) state = st.kind === 'choose' ? 'cur' : st.kind === 'undo' ? 'undo' : state;
+      nu += `<span class="cell ${st.used[k] ? 't' : 'f'}"${state ? ` data-st="${state}"` : ''}>${st.used[k]}</span>`;
+    }
+    nu += '<span></span>';
+    for (let k = 0; k < n; k++) nu += `<span class="idx">[${k}]</span>`;
+    $('nu-row').innerHTML = nu + '</div>';
+
+    // result
+    $('res-row').innerHTML = st.result.length === 0
+      ? '<p class="empty">henüz sıralama yok</p>'
+      : `<div class="chips">${st.result.map((r, k) =>
+        `<span class="chip"${st.kind === 'save' && k === st.result.length - 1 ? ' data-st="new"' : ''}><span class="k">#${k + 1}</span>[${r.join(', ')}]</span>`).join('')}</div>`;
+
+    // variables
+    const show = (v) => (v === undefined ? '—' : String(v));
+    const vars = [['i', st.vars.i, 'i'], ['current.Count', st.vars.cnt, 'cnt'], ['result.Count', st.vars.res, 'res']];
+    $('vars').innerHTML = vars.map(([name, v, key]) =>
+      `<div class="var${st.changed.includes(key) ? ' changed' : ''}"><dt>${name}</dt><dd>${show(v)}</dd></div>`).join('');
+
+    // call stack
+    let stack = `<li${st.frames.length === 0 ? ' class="top"' : ''}>Permute</li>`;
+    st.frames.forEach((f, d) => {
+      const what = d === n ? 'liste dolu' : `${d + 1}. kutu · i = ${show(f)}`;
+      stack += `<li${d === st.frames.length - 1 ? ' class="top"' : ''} style="margin-left: ${(d + 1) * 14}px">Backtrack · ${what}</li>`;
+    });
+    $('stack').innerHTML = stack;
+
+    $('result').textContent = st.finished ? `[${st.result.map((r) => `[${r.join(',')}]`).join(', ')}]` : '—';
+    $('out').dataset.kind = st.finished ? 'done' : '';
+
+    codeLines.forEach((el) => el.classList.toggle('hl', st.lines.includes(el.dataset.id)));
+
+    const [tagText, tagKind] = TAGS[st.kind];
+    $('step-count').textContent = `Adım ${idx + 1} / ${steps.length}`;
+    $('step-tag').textContent = tagText;
+    $('step-tag').dataset.kind = tagKind;
+    $('step-text').innerHTML = st.text;
+    $('prev-btn').disabled = idx === 0;
+    $('reset').disabled = idx === 0;
+    $('next-btn').disabled = idx === steps.length - 1;
+
+    const key = nums.join(',');
+    document.querySelectorAll('.presets button').forEach((b) => b.setAttribute('aria-pressed', String(parse(b.dataset.l).join(',') === key)));
+  }
+
+  function stop() {
+    if (timer) { clearInterval(timer); timer = null; }
+    $('play').textContent = '▶ Oynat';
+  }
+
+  function restart(list) {
+    stop();
+    nums = list;
+    tree = layoutTree(list.length);
+    $('tree-col').style.width = `${Math.max(tree.width, 240)}px`;
+    steps = buildSteps(list);
+    idx = 0;
+    render();
+  }
+
+  $('next-btn').addEventListener('click', () => { stop(); if (idx < steps.length - 1) { idx++; render(); } });
+  $('prev-btn').addEventListener('click', () => { stop(); if (idx > 0) { idx--; render(); } });
+  $('reset').addEventListener('click', () => { stop(); idx = 0; render(); });
+  $('play').addEventListener('click', () => {
+    if (timer) { stop(); return; }
+    if (idx === steps.length - 1) { idx = 0; render(); }
+    $('play').textContent = '❚❚ Durdur';
+    timer = setInterval(() => {
+      if (idx < steps.length - 1) { idx++; render(); }
+      if (idx === steps.length - 1) stop();
+    }, 1000);
+  });
+  document.querySelectorAll('.presets button').forEach((b) => b.addEventListener('click', () => {
+    $('list').value = b.dataset.l;
+    $('list-err').hidden = true;
+    restart(parse(b.dataset.l));
+  }));
+  $('list').addEventListener('input', (e) => {
+    const parsed = parse(e.target.value);
+    if (!parsed) { $('list-err').hidden = false; return; }
+    $('list-err').hidden = true;
+    restart(parsed);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.target && e.target.tagName === 'INPUT') return;
+    if (e.key === 'ArrowRight') $('next-btn').click();
+    else if (e.key === 'ArrowLeft') $('prev-btn').click();
+  });
+
+  restart([1, 2, 3]);
+})();
+</script>
+</body>
+</html>

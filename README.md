@@ -8,6 +8,7 @@ LeetCode'da çözdüğüm soruların C# çözümleri.
 |---|------|--------|-------|
 | 2 | [Add Two Numbers](https://leetcode.com/problems/add-two-numbers/) | Medium | [C#](src/LeetCode/Problems/P0002_AddTwoNumbers/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0002_AddTwoNumbers/) |
 | 20 | [Valid Parentheses](https://leetcode.com/problems/valid-parentheses/) | Easy | [C#](src/LeetCode/Problems/P0020_ValidParentheses/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0020_ValidParentheses/) |
+| 46 | [Permutations](https://leetcode.com/problems/permutations/) | Medium | [C#](src/LeetCode/Problems/P0046_Permutations/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0046_Permutations/) |
 | 55 | [Jump Game](https://leetcode.com/problems/jump-game/) | Medium | [C#](src/LeetCode/Problems/P0055_JumpGame/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0055_JumpGame/) |
 | 70 | [Climbing Stairs](https://leetcode.com/problems/climbing-stairs/) | Easy | [C#](src/LeetCode/Problems/P0070_ClimbingStairs/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0070_ClimbingStairs/) |
 | 74 | [Search a 2D Matrix](https://leetcode.com/problems/search-a-2d-matrix/) | Medium | [C#](src/LeetCode/Problems/P0074_SearchA2DMatrix/Solution.cs) · [Adım adım](https://physerkm.github.io/leetcode-solutions/P0074_SearchA2DMatrix/) |
